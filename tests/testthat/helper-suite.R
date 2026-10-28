@@ -62,16 +62,18 @@ suite_read_tags <- function(path) {
   list(
     component = field("componentTags"),
     test = field("testTags"),
-    type = field("testType")
+    type = field("testType"),
+    packages = field("packagesPresent")
   )
 }
 
-# Q2: everything except algebraic rules, delay, fast reactions, SBML package
-# tags and non-time-course tests.
+# Q2: everything except algebraic rules, delay, fast reactions, SBML
+# packages (by tag or by packagesPresent) and non-time-course tests.
 suite_category <- function(tags) {
   all_tags <- c(tags$component, tags$test)
   unsupported <- any(all_tags %in% suite_unsupported_tags) ||
     any(grepl(":", all_tags, fixed = TRUE)) ||
+    length(tags$packages) > 0 ||
     !identical(tags$type, "TimeCourse")
   if (unsupported) "unsupported" else "supported"
 }

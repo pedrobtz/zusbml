@@ -40,6 +40,15 @@ test_that("suite_read_tags() reads component tags, test tags and test type", {
   )
   expect_equal(tags$test, c("Amount", "Concentration"))
   expect_equal(tags$type, "TimeCourse")
+  expect_identical(tags$packages, character(0))
+})
+
+test_that("suite_read_tags() reads packagesPresent", {
+  path <- withr::local_tempfile(
+    lines = c("componentTags: Species", "packagesPresent: fbc, fbc_v2")
+  )
+
+  expect_equal(suite_read_tags(path)$packages, c("fbc", "fbc_v2"))
 })
 
 test_that("suite_read_tags() does not run an empty tag line into the next", {
@@ -57,9 +66,10 @@ test_that("suite_category() follows the supported tag set", {
   tags <- function(
     component = "Species",
     test = character(0),
-    type = "TimeCourse"
+    type = "TimeCourse",
+    packages = character(0)
   ) {
-    list(component = component, test = test, type = type)
+    list(component = component, test = test, type = type, packages = packages)
   }
 
   expect_equal(suite_category(tags()), "supported")
@@ -69,6 +79,7 @@ test_that("suite_category() follows the supported tag set", {
   expect_equal(suite_category(tags(test = "FastReaction")), "unsupported")
   expect_equal(suite_category(tags(component = "comp:Submodel")), "unsupported")
   expect_equal(suite_category(tags(test = "fbc:NonStrict")), "unsupported")
+  expect_equal(suite_category(tags(packages = "comp")), "unsupported")
   expect_equal(
     suite_category(tags(type = "FluxBalanceSteadyState")),
     "unsupported"
@@ -128,10 +139,34 @@ test_that("suite_case() gathers a case's files and tags", {
   expect_equal(basename(case$model), "00000-sbml-l3v2.xml")
 })
 
-test_that("suite_run_case() reports a case as pending before the reader exists", {
+test_that("suite_run_case() reports a readable case as read before derivation", {
   case <- suite_case(fixture_suite(), "00000")
 
-  expect_equal(suite_run_case(case)$status, "pending")
+  expect_equal(suite_run_case(case)$status, "read")
+})
+
+test_that("suite_run_case() reports a package document as refused", {
+  dir <- withr::local_tempdir()
+  dir.create(file.path(dir, "00001"))
+  file.copy(
+    file.path(
+      fixture_suite(),
+      "00000",
+      c("00000-settings.txt", "00000-results.csv")
+    ),
+    file.path(dir, "00001", c("00001-settings.txt", "00001-results.csv"))
+  )
+  writeLines("packagesPresent: comp", file.path(dir, "00001", "00001-model.m"))
+  writeLines(
+    paste0(
+      '<sbml xmlns="http://www.sbml.org/sbml/level3/version1/core" ',
+      'xmlns:comp="http://www.sbml.org/sbml/level3/version1/comp/version1" ',
+      'level="3" version="1" comp:required="true"><model/></sbml>'
+    ),
+    file.path(dir, "00001", "00001-sbml-l3v2.xml")
+  )
+
+  expect_equal(suite_run_case(suite_case(dir, "00001"))$status, "refused")
 })
 
 test_that("suite_run() returns one row per case with a status", {
@@ -139,7 +174,7 @@ test_that("suite_run() returns one row per case with a status", {
 
   expect_named(report, c("id", "category", "status", "message"))
   expect_equal(report$id, "00000")
-  expect_equal(report$status, "pending")
+  expect_equal(report$status, "read")
 })
 
 test_that("suite_floor() reads the committed floors as integers", {

@@ -11,6 +11,8 @@ Description: Reads Systems Biology Markup Language ('SBML') core
     ordinary differential equation solver needs, following the
     specification at <https://sbml.org/documents/specifications/>.
 License: MIT + file LICENSE
+Imports: 
+    zuxml
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
 Suggests: 

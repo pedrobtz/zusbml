@@ -18,7 +18,7 @@ portfolio's.
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zusbml/issues/2) | [#15](https://github.com/pedrobtz/zusbml/pull/15) | 2026-10-28 |
 | 1 | [Oracle harness](#stage-1--oracle-harness) | full | [#3](https://github.com/pedrobtz/zusbml/issues/3) | [#16](https://github.com/pedrobtz/zusbml/pull/16) | 2026-10-28 |
-| 2 | [Document reader and model object](#stage-2--document-reader-and-model-object) | quick | [#4](https://github.com/pedrobtz/zusbml/issues/4) | | |
+| 2 | [Document reader and model object](#stage-2--document-reader-and-model-object) | quick | [#4](https://github.com/pedrobtz/zusbml/issues/4) | [#17](https://github.com/pedrobtz/zusbml/pull/17) | 2026-10-28 |
 | 3 | [MathML](#stage-3--mathml) | quick | [#5](https://github.com/pedrobtz/zusbml/issues/5) | | |
 | 4 | [Derivation without events](#stage-4--derivation-without-events) | quick | [#6](https://github.com/pedrobtz/zusbml/issues/6) | | |
 | 5 | [Events and solver interfaces](#stage-5--events-and-solver-interfaces) | quick | [#7](https://github.com/pedrobtz/zusbml/issues/7) | | |
@@ -94,17 +94,19 @@ every later stage reports a number against them.
 - The supported tag set and the per-stage pass counts are committed.
 
 **Floors.** Test Suite 3.5.0 has 1,823 semantic cases; 1,692 have a Level
-3 Version 2 file and are run. Under Q2, 1,386 are supported (966 without
-events, 420 with) and 306 unsupported (272 by tag, 34 flux-balance).
+3 Version 2 file and are run. Under Q2, 1,384 are supported (964 without
+events, 420 with) and 308 unsupported (by tag, by `packagesPresent`, or
+flux-balance). Revised 2026-10-28 in Stage 2: cases 01822 and 01823 declare
+`comp` only in `packagesPresent`, which Stage 1's count missed.
 `tests/testthat/suite-floor.dcf` holds the minimums the current stage must
 meet. Targets, recorded 2026-10-28:
 
 | After stage | read | pass | refused |
 | --- | --- | --- | --- |
 | 1 | 0 | 0 | 0 |
-| 2 | 1,386 | 0 | 157 (SBML package cases, refused on read) |
-| 4 | 1,386 | 966 | 306 |
-| 5 | 1,386 | 1,386 | 306 |
+| 2 | 1,384 | 0 | 159 (SBML package cases, refused on read) |
+| 4 | 1,384 | 964 | 308 |
+| 5 | 1,384 | 1,384 | 308 |
 
 A stage that falls short records the gap and the case ids here.
 

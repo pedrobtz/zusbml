@@ -126,7 +126,7 @@ Five layers, all R in v0.1.0:
    the level defines them and `NA` where it does not (§6.1). Unknown
    elements in the SBML namespace are errors; elements in other
    namespaces are the package check (D8); `annotation` and `notes` are
-   kept as `zuxml` nodes.
+   kept as serialized XML text (D14).
 2. **MathML** (`R/mathml.R`). Content MathML to R language objects and
    back (§6.2). One operator table drives both directions.
 3. **Model object** (`R/model.R`). `sbml_model`: a list with one data
@@ -243,10 +243,11 @@ Two oracles, neither vendored nor committed:
   (12 MB) from the release, checks its checksum and unpacks it into a
   directory listed in `.gitignore` and `.Rbuildignore`; CI caches it.
   Unpacked it is about 37 MB in 17,000 files, too big to commit (D5).
-  For every semantic case whose tags are within the supported set, the Level 3 Version 2 file is read, derived, run from
-  the settings file's `start`, `duration` and `steps`, and the named
-  `variables` are compared with the results CSV under its `absolute` and
-  `relative` tolerances by a test helper applying the suite's rule,
+  For every semantic case whose tags are within the supported set, the
+  Level 3 Version 2 file is read, derived, run from the settings file's
+  `start`, `duration` and `steps`, and the named `variables` are
+  compared with the results CSV under its `absolute` and `relative`
+  tolerances by a test helper applying the suite's rule,
   `|actual - expected| <= absolute + relative * |expected|` (D12). The
   runner is deSolve (D13). Cases with unsupported tags
   (`AlgebraicRule`, `Delay`, `comp`, `fbc`) are asserted to be refused,
@@ -370,6 +371,14 @@ decides it and the maintainer may overturn it.
 - **D12 (M, 2026-10-28).** The Test Suite comparison is a test helper,
   not `daffiz`, which is not on CRAN and would need
   `Additional_repositories` in `Suggests`.
+- **D14 (M, 2026-10-28, Stage 2).** `notes`, `annotation` and a
+  constraint's `message` are kept as serialized XML text, not `zuxml`
+  nodes: nodes hold external pointers, so a re-read model would never be
+  `identical()` and the §2 round trip could not be tested. Until Stage 3
+  turns math into R expressions it is serialized MathML text for the same
+  reason. `notes` and `annotation` on `listOf*` containers are dropped.
+  `zuxml` 0.1.0 parses and serializes but cannot build nodes, so
+  `sbml_write()` emits XML text itself.
 - **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
   in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
   added after it is.
