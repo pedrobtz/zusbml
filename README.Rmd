@@ -1,0 +1,134 @@
+---
+output: github_document
+---
+
+<!-- README.md is generated from README.Rmd. Please edit that file -->
+
+```{r, include = FALSE}
+knitr::opts_chunk$set(
+  collapse = TRUE,
+  comment = "#>"
+)
+```
+
+# zusbml
+
+<!-- badges: start -->
+[![Lifecycle: experimental](https://img.shields.io/badge/lifecycle-experimental-orange.svg)](https://lifecycle.r-lib.org/articles/stages.html#experimental)
+[![R-CMD-check](https://github.com/pedrobtz/zusbml/actions/workflows/R-CMD-check.yaml/badge.svg)](https://github.com/pedrobtz/zusbml/actions/workflows/R-CMD-check.yaml)
+[![coverage](https://raw.githubusercontent.com/pedrobtz/zusbml/gh-pages/badges/coverage.svg)](https://github.com/pedrobtz/zusbml/actions/workflows/coverage.yaml)
+<!-- badges: end -->
+
+## Overview
+
+[SBML](https://sbml.org), the Systems Biology Markup Language, is how
+models of biochemical networks, pharmacokinetics and cell signaling are
+shared: hundreds of them are curated in [BioModels](https://www.ebi.ac.uk/biomodels/).
+But an SBML file describes reactions between species in compartments, and a
+solver wants `dX/dt` for each state. The translation, with amounts against
+concentrations, compartments that change size, conversion factors and
+events, is where hand-written versions go wrong. The R packages that read
+SBML either need the libSBML system library or are no longer maintained.
+
+zusbml reads an SBML document into one R object, writes it back as SBML,
+and derives from it the equations a solver needs, with nothing but R
+installed.
+
+* **Derivation is the point.** `sbml_odes()` gives the states, their
+  right-hand sides, the assignments and the events as R expressions;
+  `sbml_derivs()` turns them into a function for
+  [deSolve](https://cran.r-project.org/package=deSolve), with SBML's event
+  semantics (delays, priorities, persistence) included.
+* **Checked against the SBML Test Suite.** All 1,384 cases of the
+  [SBML Test Suite](https://github.com/sbmlteam/sbml-test-suite) 3.5.0
+  within the supported set reproduce their reference results under each
+  case's own tolerances. The other 308 Level 3 Version 2 cases use
+  algebraic rules, `delay`, fast reactions or SBML packages, and are refused
+  by name rather than approximated.
+* **Pure R.** The only package zusbml imports is
+  [zuxml](https://github.com/pedrobtz/zuxml), for the XML; there is no system
+  library to install.
+* **Round trips.** Reading, writing and reading again gives an identical
+  model, for every readable Test Suite case and fifty curated BioModels.
+
+## Installation
+
+zusbml is not on CRAN yet. Install the development version from GitHub:
+
+``` r
+# install.packages("pak")
+pak::pak("pedrobtz/zusbml")
+```
+
+## Usage
+
+```{r, message = FALSE}
+library(zusbml)
+```
+
+The package comes with a small model of a drug taken by mouth: absorbed
+from the gut into the central compartment, eliminated from there, and dosed
+a second time at hour 12. `sbml_read()` takes a file, a URL or the XML
+itself.
+
+```{r}
+m <- sbml_read(system.file("extdata", "dosing.xml", package = "zusbml"))
+m
+```
+
+Each kind of element is a data frame. The drug in the gut is an amount; the
+drug in the central compartment is a concentration.
+
+```{r}
+sbml_species(m)[, c("id", "compartment", "initial_amount", "has_only_substance_units")]
+```
+
+`sbml_odes()` derives the equations. The concentration's right-hand side is
+divided by the volume of its compartment, and each reaction id stands for
+its rate.
+
+```{r}
+eq <- sbml_odes(m)
+eq$rhs
+eq$assignments
+```
+
+`sbml_derivs()` gives deSolve what it needs, including the event: the drug
+in the gut goes back up at hour 12.
+
+```{r}
+f <- sbml_derivs(m)
+deSolve::ode(
+  attr(f, "y0"), times = c(0, 6, 12, 18, 24), func = f, parms = attr(f, "parms"),
+  method = "lsodar", rootfunc = attr(f, "rootfunc"), events = attr(f, "events")
+)
+```
+
+`sbml_write()` writes SBML Level 3 Version 2, and reading it back gives the
+same model. `sbml_to_rxode2()` writes the equations for
+[rxode2](https://cran.r-project.org/package=rxode2) instead.
+
+```{r}
+identical(sbml_read(sbml_write(m)), m)
+```
+
+Functions are named `sbml_*()`: `sbml_read()` and `sbml_write()` for
+documents, an accessor per element kind, and `sbml_odes()`,
+`sbml_derivs()` and `sbml_to_rxode2()` for equations.
+
+## Learn more
+
+* [Simulating SBML models](https://pedrobtz.github.io/zusbml/articles/zusbml.html)
+  walks through reading, deriving and simulating a model, with events.
+* `?zusbml` lists what is supported and what is refused.
+* The [reference index](https://pedrobtz.github.io/zusbml/reference/)
+  documents every function.
+
+## Related work
+
+zusbml follows the
+[SBML Level 3 Version 2 Core specification](https://sbml.org/documents/specifications/)
+and reads Level 2 Versions 4 and 5 by mapping them to it. It is checked
+against the SBML Test Suite and curated models from BioModels, neither of
+which it ships. [libSBML](https://sbml.org/software/libsbml/) is the
+reference implementation; zusbml does not use it.

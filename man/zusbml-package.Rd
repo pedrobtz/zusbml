@@ -8,6 +8,29 @@
 \description{
 Reads Systems Biology Markup Language ('SBML') core documents, Level 3 Versions 1 and 2 and Level 2 Versions 4 and 5, into one R object, writes that object back as Level 3 Version 2, and derives from it the states, right-hand sides, assignments and events an ordinary differential equation solver needs, following the specification at \url{https://sbml.org/documents/specifications/}.
 }
+\section{Scope}{
+
+zusbml reads SBML Level 3 Versions 1 and 2 core, and Level 2 Versions 4
+and 5 mapped to the Level 3 meaning, and writes Level 3 Version 2.
+Derivation covers reactions, assignment and rate rules, initial
+assignments, function definitions, \code{rateOf}, conversion factors,
+compartments that change size, and events with delays, priorities and
+persistence.
+
+It refuses, with a \code{zusbml_unsupported} error naming the construct:
+\itemize{
+\item SBML Level 3 packages (\code{comp}, \code{fbc}, \code{layout}, \code{qual}, ...), unless
+\code{sbml_read(ignore_packages = TRUE)};
+\item Level 1 and Level 2 Versions 1 to 3;
+\item in derivation, algebraic rules (a DAE), the \code{delay} csymbol (a delay
+differential equation) and fast reactions;
+\item in \code{\link[=sbml_to_rxode2]{sbml_to_rxode2()}}, events, unless dropped on request.
+}
+
+It does not check units, validate against libSBML's full rule set, or
+simulate on its own: \code{\link[=sbml_derivs]{sbml_derivs()}} hands the equations to deSolve.
+}
+
 \seealso{
 Useful links:
 \itemize{

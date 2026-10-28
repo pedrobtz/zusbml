@@ -16,3 +16,4 @@
 ^sbml-test-suite$
 ^tools$
 ^biomodels$
+^README\.Rmd$
