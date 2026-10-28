@@ -22,6 +22,11 @@ jobs:
       # Quick on each push to a pull request, full after merge. The
       # `full-ci` label runs the full set on a pull request before merging.
       profile: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && 'quick' || 'full' }}
+      # CRAN's no-Suggests and no-long-double flavors, full profile only:
+      # tests must degrade without deSolve and withr, and MathML <cn> parsing
+      # turns text into numbers.
+      nosuggests: true
+      nold: true
       # The shared default plus Windows R-devel, the combination CRAN's own
       # Windows check runs. It runs in the full profile only.
       runners: >-
