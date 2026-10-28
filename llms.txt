@@ -19,6 +19,8 @@ pak::pak("pedrobtz/zusbml")
 
 ## All functions
 
+- [`sbml_check()`](https://pedrobtz.github.io/zusbml/reference/sbml_check.md)
+  : Check a model's structure
 - [`sbml_compartments()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   [`sbml_species()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   [`sbml_parameters()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
@@ -41,6 +43,10 @@ pak::pak("pedrobtz/zusbml")
   : Read an SBML document
 - [`sbml_to_rxode2()`](https://pedrobtz.github.io/zusbml/reference/sbml_to_rxode2.md)
   : Write a model as rxode2 text
+- [`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
+  : Write a model as SBML
+- [`sbml_write_json()`](https://pedrobtz.github.io/zusbml/reference/sbml_write_json.md)
+  : Write a model as JSON
 - [`zusbml_info()`](https://pedrobtz.github.io/zusbml/reference/zusbml_info.md)
   : What this build of zusbml reads and writes
 

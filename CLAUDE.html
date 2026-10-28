@@ -98,6 +98,10 @@
 <li>
 <a href="R/rxode2.R">R/rxode2.R</a> prints derived equations as rxode2 text.</li>
 <li>
+<a href="R/write.R">R/write.R</a> writes Level 3 Version 2 as text (<code>zuxml</code> cannot build nodes); the Test Suite runner requires read, write, read to give an identical model. <code><a href="reference/sbml_write_json.html">sbml_write_json()</a></code> goes through <code>zujson</code>.</li>
+<li>
+<a href="R/check.R">R/check.R</a> is <code><a href="reference/sbml_check.html">sbml_check()</a></code>: structural findings as a data frame, never an error.</li>
+<li>
 <a href="R/model.R">R/model.R</a> builds the <code>sbml_model</code>: one data frame per element kind, list columns for math and nested parts, accessors and printing.</li>
 <li>
 <a href="R/conditions.R">R/conditions.R</a> builds the classed conditions of design §8; their fields (<code>path</code>, <code>attribute</code>, <code>section</code>, <code>package</code>) are what tests assert on.</li>

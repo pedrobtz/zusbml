@@ -13,9 +13,10 @@ zusbml_info()
 A list: `version`, the package version; `read`, the SBML levels and
 versions
 [`sbml_read()`](https://pedrobtz.github.io/zusbml/reference/sbml_read.md)
-accepts; `write`, the level and version `sbml_write()` produces; and
-`packages`, the SBML Level 3 packages supported (none: they are refused
-or, on request, ignored).
+accepts; `write`, the level and version
+[`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
+produces; and `packages`, the SBML Level 3 packages supported (none:
+they are refused or, on request, ignored).
 
 ## Examples
 

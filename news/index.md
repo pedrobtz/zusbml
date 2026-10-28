@@ -41,5 +41,16 @@
   writes the equations of a model as rxode2 model text; events are
   refused, or left out with `events = "drop"`.
 
+- [`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
+  writes a model as SBML Level 3 Version 2; reading it back gives an
+  identical model for every readable SBML Test Suite case.
+  [`sbml_write_json()`](https://pedrobtz.github.io/zusbml/reference/sbml_write_json.md)
+  writes the model object as JSON with zujson.
+
+- [`sbml_check()`](https://pedrobtz.github.io/zusbml/reference/sbml_check.md)
+  reports structural problems (duplicate ids, unresolved references,
+  symbols set twice, rules or events on constants, assignment cycles) as
+  a data frame.
+
 - [`zusbml_info()`](https://pedrobtz.github.io/zusbml/reference/zusbml_info.md)
   reports what the package reads and writes.

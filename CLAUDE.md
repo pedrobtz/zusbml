@@ -124,6 +124,14 @@ semantics, validation). Built so far:
   time 0.
 - [R/rxode2.R](https://pedrobtz.github.io/zusbml/R/rxode2.R) prints
   derived equations as rxode2 text.
+- [R/write.R](https://pedrobtz.github.io/zusbml/R/write.R) writes Level
+  3 Version 2 as text (`zuxml` cannot build nodes); the Test Suite
+  runner requires read, write, read to give an identical model.
+  [`sbml_write_json()`](https://pedrobtz.github.io/zusbml/reference/sbml_write_json.md)
+  goes through `zujson`.
+- [R/check.R](https://pedrobtz.github.io/zusbml/R/check.R) is
+  [`sbml_check()`](https://pedrobtz.github.io/zusbml/reference/sbml_check.md):
+  structural findings as a data frame, never an error.
 - [R/model.R](https://pedrobtz.github.io/zusbml/R/model.R) builds the
   `sbml_model`: one data frame per element kind, list columns for math
   and nested parts, accessors and printing.
