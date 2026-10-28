@@ -12,7 +12,7 @@ on 2026-10-28. From here on this file is authoritative; the RFC is history.
 - **Packages:** `zusbml` (not yet created; crandb returns `not_found`, there
   is no `pedrobtz/zusbml` repository and no repository of that name on
   GitHub). `Imports: zuxml`. No `LinkingTo` in v0.1.0. `Suggests:
-  testthat, zupkode, daffiz, zujson`. Vendors nothing. MIT.
+  testthat, deSolve, zujson` (D12, D13). Vendors nothing. MIT.
 - **Source:** the conversation of 2026-10-28 on the "compete with Pumas"
   analysis, which proposed a PEtab importer for R and found that CRAN has
   no SBML reader (`rsbml` left CRAN in 2007 and on Bioconductor pins
@@ -97,14 +97,15 @@ a sibling in `Imports`; RFC 0022 (`zuxslt`) set that precedent for
   whole XML layer in v0.1.0 (D2). Its C header, a streaming parser with
   element handlers and a versioned table, is the §14 route for documents
   in the hundreds of megabytes.
-- **`zupkode`** (RFC 0047): `Suggests`. Runs the derived equations for the
-  Test Suite comparison (§7) when installed; deSolve is the fallback in
-  CI. The Test Suite becomes `zupkode`'s second conformance corpus.
+- **`zupkode`** (RFC 0047): not in v0.1.0 (D13); it is not on CRAN.
+  deSolve runs the derived equations for the Test Suite comparison (§7).
+  Once `zupkode` is on CRAN it can join `Suggests`, and the Test Suite
+  becomes its second conformance corpus.
 - **`zupkpmx`** (RFC 0046): consumer. zupkpmx#17 becomes a PEtab reader
   that takes the SBML model from `zusbml` and adds the conditions,
   observables, measurements and parameters tables.
-- **`daffiz`**: `Suggests`. Compares simulated trajectories with the
-  Test Suite's results CSVs under its tolerances.
+- **`daffiz`**: not used (D12). It is not on CRAN, and the Test Suite's
+  tolerance rule is one line in a test helper.
 - **`zujson`**: `Suggests`. `sbml_write_json()` for the object, when
   someone wants the model without XML.
 - **`zufuzz`**: development only. Fuzzes the MathML and document
@@ -241,12 +242,13 @@ Two oracles, neither vendored nor committed:
   `tools/` holds a script that downloads `semantic_tests_v3.5.0.zip`
   (12 MB) from the release, checks its checksum and unpacks it into a
   directory listed in `.gitignore` and `.Rbuildignore`; CI caches it.
-  Unpacked it is about 37 MB in 17,000 files, too big to commit (D5). For every semantic case whose tags are within the
-  supported set, the Level 3 Version 2 file is read, derived, run from
+  Unpacked it is about 37 MB in 17,000 files, too big to commit (D5).
+  For every semantic case whose tags are within the supported set, the Level 3 Version 2 file is read, derived, run from
   the settings file's `start`, `duration` and `steps`, and the named
   `variables` are compared with the results CSV under its `absolute` and
-  `relative` tolerances through `daffiz`. The runner is `zupkode` when
-  installed and deSolve otherwise. Cases with unsupported tags
+  `relative` tolerances by a test helper applying the suite's rule,
+  `|actual - expected| <= absolute + relative * |expected|` (D12). The
+  runner is deSolve (D13). Cases with unsupported tags
   (`AlgebraicRule`, `Delay`, `comp`, `fbc`) are asserted to be refused,
   not skipped. The Level 2 Version 5 file of each case is read too and
   must derive to the same equations. The writer is judged here too:
@@ -335,7 +337,7 @@ decides it and the maintainer may overturn it.
 - **D1 (M).** `zusbml` is its own package in the text-formats layer, not
   a reader inside `zupkpmx`. SBML has its own specification, test suite
   and users; the pharmacometrics package takes the model from here.
-- **D2 (C).** v0.1.0 is pure R on `zuxml`'s tree API. The work is the
+- **D2 (M, 2026-10-28).** v0.1.0 is pure R on `zuxml`'s tree API. The work is the
   semantics, not the parsing, and curated models are small. The
   streaming C API is the §14 route if documents in the hundreds of
   megabytes turn up.
@@ -349,7 +351,7 @@ decides it and the maintainer may overturn it.
   `tools/` script into a gitignored directory and never committed or
   shipped: 37 MB unpacked, and LGPL 2.1 data in an MIT package is
   avoidable and avoided.
-- **D6 (C).** MathML becomes R language objects, not a package-private
+- **D6 (M, 2026-10-28).** MathML becomes R language objects, not a package-private
   tree. R already has an expression type, every consumer can `eval()`
   or walk it, and `zupkpmx` reads R expressions today.
 - **D7 (C).** Derivation follows the Level 3 Version 2 specification
@@ -365,6 +367,12 @@ decides it and the maintainer may overturn it.
 - **D11 (M).** The name is `zusbml`: a text-format package, so no `pk`
   infix. Functions are `sbml_*`, with `zusbml_info()` for the
   package-level entry point.
+- **D12 (M, 2026-10-28).** The Test Suite comparison is a test helper,
+  not `daffiz`, which is not on CRAN and would need
+  `Additional_repositories` in `Suggests`.
+- **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
+  in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
+  added after it is.
 
 ## 14. Later versions, in the order they are expected
 
@@ -387,9 +395,11 @@ decides it and the maintainer may overturn it.
 - **Q2.** Which Test Suite tags are in the supported set at v0.1.0?
   This RFC proposes everything except `AlgebraicRule`, `Delay`,
   `FastReaction` and the package tags, and lets Stage 0 confirm.
+  **Decided 2026-10-28:** as proposed.
 - **Q3.** Is deSolve an acceptable CI fallback runner, or should the
   Suite comparison require `zupkode`? This RFC allows deSolve so the
-  package does not wait on RFC 0047.
+  package does not wait on RFC 0047. **Decided 2026-10-28:** deSolve
+  only (D13).
 - **Q4.** Should Level 1 documents be read at all? This RFC says no;
   BioModels has none in its curated branch.
 - **Q5.** Is v0.1.0 a CRAN submission or a GitHub release? The board's
