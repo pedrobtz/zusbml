@@ -4,7 +4,9 @@
 on:
   push:
     branches: [main, master]
+  # `labeled` so that adding `full-ci` reruns it with every case.
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
 
 name: test-suite
 
@@ -30,6 +32,9 @@ jobs:
       ZUSBML_SUITE_REPORT: ${{ github.workspace }}/suite-report.csv
       ZUSBML_SUITE_CORES: "4"
       ZUSBML_SUITE_SHARD: ${{ matrix.shard }}
+      # Quick on pull requests: 00966 alone takes minutes (10^5 events), so it
+      # runs on main and with the full-ci label, as the r-actions profiles do.
+      ZUSBML_SUITE_SKIP: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && '00966' || '' }}
     steps:
       - uses: actions/checkout@v6
 
