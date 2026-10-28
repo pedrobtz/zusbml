@@ -369,7 +369,28 @@ suite_run <- function(dir) {
   ids <- suite_cases(dir)
   cores <- as.integer(Sys.getenv("ZUSBML_SUITE_CORES", "1"))
   rows <- if (cores > 1 && .Platform$OS.type == "unix") {
-    parallel::mclapply(ids, run, mc.cores = cores)
+    # The stochastic cases fire up to 10^5 events and take minutes; start
+    # them first and hand out cases one at a time, so the other workers
+    # take the rest meanwhile.
+    slow <- vapply(
+      ids,
+      function(id) {
+        tags <- readLines(
+          file.path(dir, id, paste0(id, "-model.m")),
+          warn = FALSE
+        )
+        any(grepl("RandomEventExecution", tags, fixed = TRUE))
+      },
+      logical(1)
+    )
+    order <- c(ids[slow], ids[!slow])
+    rows <- parallel::mclapply(
+      order,
+      run,
+      mc.cores = cores,
+      mc.preschedule = FALSE
+    )
+    rows[match(ids, order)]
   } else {
     lapply(ids, run)
   }

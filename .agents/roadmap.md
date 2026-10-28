@@ -25,7 +25,7 @@ portfolio's.
 | 6 | [Writer and structural checks](#stage-6--writer-and-structural-checks) | quick | [#8](https://github.com/pedrobtz/zusbml/issues/8) | [#21](https://github.com/pedrobtz/zusbml/pull/21) | 2026-10-28 |
 | 7 | [Level 2, BioModels and property test](#stage-7--level-2-biomodels-and-property-test) | quick | [#9](https://github.com/pedrobtz/zusbml/issues/9) | [#22](https://github.com/pedrobtz/zusbml/pull/22) | 2026-10-28 |
 | 8 | [Documentation](#stage-8--documentation) | quick | [#10](https://github.com/pedrobtz/zusbml/issues/10) | [#23](https://github.com/pedrobtz/zusbml/pull/23) | 2026-10-28 |
-| 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zusbml/issues/11) | | |
+| 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zusbml/issues/11) | | 2026-10-28 |
 | 10 | [v0.1.0 readiness](#stage-10--v010-readiness) | full | [#12](https://github.com/pedrobtz/zusbml/issues/12) | | |
 
 ## Stage 0 — Package identity
