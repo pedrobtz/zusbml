@@ -1,3 +1,14 @@
+# print() shows level, version and non-zero counts
+
+    Code
+      print(m)
+    Output
+      <sbml_model 'decay'> SBML Level 3 Version 2
+        compartments  1
+        species       2
+        parameters    1
+        reactions     1
+
 # summary() returns the counts
 
     Code
@@ -19,15 +30,4 @@
       <sbml_model> SBML Level 3 Version 1
         (empty model)
         ignored packages: fbc
-
-# print() shows level, version and non-zero counts
-
-    Code
-      print(m)
-    Output
-      <sbml_model 'decay'> SBML Level 3 Version 2
-        compartments  1
-        species       2
-        parameters    1
-        reactions     1
 

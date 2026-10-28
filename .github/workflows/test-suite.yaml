@@ -22,6 +22,7 @@ jobs:
       ZUSBML_TEST_SUITE: ${{ github.workspace }}/sbml-test-suite
       ZUSBML_REQUIRE_SUITE: "true"
       ZUSBML_SUITE_REPORT: ${{ github.workspace }}/suite-report.csv
+      ZUSBML_SUITE_CORES: "4"
     steps:
       - uses: actions/checkout@v6
 

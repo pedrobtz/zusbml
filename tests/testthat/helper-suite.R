@@ -186,7 +186,7 @@ suite_run_case <- function(case) {
   }
   # Solver failures are the case failing, not the harness erring.
   actual <- tryCatch(
-    suite_simulate(eq, case$settings),
+    suite_simulate(model, eq, case$settings),
     error = function(cnd) cnd
   )
   if (inherits(actual, "condition")) {
@@ -208,13 +208,12 @@ suite_run_case <- function(case) {
 
 # Simulate derived equations on the case's time grid with deSolve, and
 # report each variable as the amount or concentration the settings ask for.
-suite_simulate <- function(eq, settings) {
-  derivs_function <- utils::getFromNamespace("derivs_function", "zusbml")
+suite_simulate <- function(model, eq, settings) {
   vars <- settings$variables
   species <- eq$species
   compartments <- species$compartment[species$id %in% vars]
   outputs <- unique(c(vars, compartments))
-  f <- derivs_function(eq, outputs)
+  f <- getExportedValue("zusbml", "sbml_derivs")(model, outputs)
   times <- seq(
     settings$start,
     settings$start + settings$duration,
@@ -224,7 +223,7 @@ suite_simulate <- function(eq, settings) {
     values <- matrix(
       vapply(
         times,
-        function(t) f(t, numeric(0), eq$constants)[[2]],
+        function(t) f(t, numeric(0), attr(f, "parms"))[[2]],
         numeric(length(outputs))
       ),
       ncol = length(outputs),
@@ -233,13 +232,15 @@ suite_simulate <- function(eq, settings) {
     )
   } else {
     sim <- deSolve::ode(
-      y = eq$initial,
+      y = attr(f, "y0"),
       times = times,
       func = f,
-      parms = eq$constants,
-      method = "lsoda",
+      parms = attr(f, "parms"),
+      method = "lsodar",
       rtol = 1e-10,
-      atol = 1e-12
+      atol = 1e-12,
+      rootfunc = attr(f, "rootfunc"),
+      events = attr(f, "events")
     )
     if (nrow(sim) != length(times)) {
       stop("the solver stopped at time ", sim[nrow(sim), 1])
@@ -310,10 +311,18 @@ suite_cases <- function(dir) {
   ids[file.exists(file.path(dir, ids, paste0(ids, "-sbml-l3v2.xml")))]
 }
 
+# Cases run in parallel on ZUSBML_SUITE_CORES cores (default 1, as
+# R CMD check limits tests to two); the test-suite workflow sets it.
+# Stochastic cases make a run vary only in their own rows.
 suite_run <- function(dir) {
-  rows <- lapply(suite_cases(dir), function(id) {
-    as.data.frame(suite_run_case(suite_case(dir, id)))
-  })
+  run <- function(id) as.data.frame(suite_run_case(suite_case(dir, id)))
+  ids <- suite_cases(dir)
+  cores <- as.integer(Sys.getenv("ZUSBML_SUITE_CORES", "1"))
+  rows <- if (cores > 1 && .Platform$OS.type == "unix") {
+    parallel::mclapply(ids, run, mc.cores = cores)
+  } else {
+    lapply(ids, run)
+  }
   do.call(rbind, rows)
 }
 

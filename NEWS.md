@@ -13,12 +13,20 @@
   ...). `sbml_math()` shows math as R code, and `sbml_functions()` adds each
   function definition as a callable R function.
 
-* `sbml_odes()` derives the states, right-hand sides, assignments and
-  constants of a model without events, following the Level 3 Version 2
+* `sbml_odes()` derives the states, right-hand sides, assignments,
+  constants and events of a model, following the Level 3 Version 2
   specification, and `sbml_initial_state()` gives the states at time 0.
   Algebraic rules, the `delay` csymbol and fast reactions are refused with
   `zusbml_unsupported`; assignment cycles and missing values are
-  `zusbml_derive_error`. All 964 event-free supported SBML Test Suite cases
+  `zusbml_derive_error`.
+
+* Events are derived and run: `sbml_derivs()` returns a derivative function
+  for deSolve with the root function and event handler that apply SBML's
+  event semantics (delays, persistence, priorities, values from trigger
+  time, events at time 0). All 1,384 supported SBML Test Suite cases
   reproduce their reference results.
+
+* `sbml_to_rxode2()` writes the equations of a model as rxode2 model text;
+  events are refused, or left out with `events = "drop"`.
 
 * `zusbml_info()` reports what the package reads and writes.

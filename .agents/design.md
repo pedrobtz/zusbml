@@ -398,6 +398,26 @@ decides it and the maintainer may overturn it.
   converting math, and the writer takes the model's ids, so both directions
   agree. Derivation binds `.time` always and `time` unless the model defines
   it. Internal names all start with "." because SBML ids cannot.
+- **D17 (M, 2026-10-28, Stage 5).** `sbml_derivs(m, outputs)` returns the
+  `function(t, y, parms)` with attributes `y0` (states after any events at
+  time 0), `parms`, and for models with events `rootfunc` and `events`, the
+  arguments deSolve's `lsodar` takes. The event engine applies section 4.12 in
+  full: one root per relational atom of each trigger (a continuous function,
+  so the solver locates crossings) plus one for the earliest pending
+  execution; triggers are read a forward-Euler step of relative size 1e-9 past
+  each root, so a strict inequality on its boundary resolves the way the
+  trajectory moves; delays, persistence, priorities,
+  `useValuesFromTriggerTime` and same-time cascades are handled in the
+  handler; events of equal or no priority run in random order, as the
+  specification says, so a seed makes runs reproducible. A concentration under
+  a rate rule in a compartment that can change size is integrated as an amount
+  by the product rule, so an event that resizes the compartment keeps the
+  amount. `sbml_to_rxode2()` writes `if` as `ifelse()`, `log(x, b)` as
+  `log(x)/log(b)`, `!` with its operand in parentheses (rxode2 binds it
+  tighter than R), inlines the SBML-named helpers, and gives ids rxode2 cannot
+  take (a leading `_`, or reserved names such as `time` and `param`) a `.u`
+  prefix. Its text parses in rxode2 for all 964 event-free supported Test
+  Suite models.
 - **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
   in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
   added after it is.

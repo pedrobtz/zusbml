@@ -177,3 +177,85 @@ rule <- function(type, variable, expr) {
 }
 
 odes <- function(...) sbml_odes(sbml_read(model_doc(...)))
+
+# An event element from R expressions.
+evt <- function(
+  id,
+  trigger,
+  assignments,
+  delay = NULL,
+  priority = NULL,
+  persistent = TRUE,
+  initial = TRUE,
+  trigger_time = TRUE
+) {
+  part <- function(tag, expr) {
+    if (is.null(expr)) "" else paste0("<", tag, ">", mml(expr), "</", tag, ">")
+  }
+  paste0(
+    '<event id="',
+    id,
+    '" useValuesFromTriggerTime="',
+    tolower(trigger_time),
+    '">',
+    '<trigger initialValue="',
+    tolower(initial),
+    '" persistent="',
+    tolower(persistent),
+    '">',
+    mml(trigger),
+    "</trigger>",
+    part("priority", priority),
+    part("delay", delay),
+    "<listOfEventAssignments>",
+    paste0(
+      '<eventAssignment variable="',
+      names(assignments),
+      '">',
+      vapply(assignments, mml, character(1)),
+      "</eventAssignment>",
+      collapse = ""
+    ),
+    "</listOfEventAssignments></event>"
+  )
+}
+
+with_events <- function(doc, events) {
+  sub(
+    "</model>",
+    paste0("<listOfEvents>", events, "</listOfEvents></model>"),
+    doc,
+    fixed = TRUE
+  )
+}
+
+# Run a model with sbml_derivs() and deSolve at the given times.
+simulate <- function(doc, times, outputs = character(0)) {
+  f <- sbml_derivs(sbml_read(doc), outputs)
+  out <- deSolve::ode(
+    attr(f, "y0"),
+    times,
+    f,
+    attr(f, "parms"),
+    method = "lsodar",
+    rtol = 1e-10,
+    atol = 1e-12,
+    rootfunc = attr(f, "rootfunc"),
+    events = attr(f, "events")
+  )
+  as.data.frame(out)
+}
+
+# x grows at rate 1 from 0; events act on it or on p.
+growth <- function(events, p = 0) {
+  with_events(
+    model_doc(
+      parameters = paste0(
+        par("x", 0, constant = FALSE),
+        par("p", p, constant = FALSE)
+      ),
+      rules = rule("rate", "x", 1)
+    ),
+    events
+  )
+}
