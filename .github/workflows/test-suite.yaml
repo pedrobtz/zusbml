@@ -75,7 +75,7 @@ jobs:
       - uses: actions/cache@v4
         with:
           path: biomodels
-          key: biomodels-${{ hashFiles('tools/biomodels.txt') }}
+          key: biomodels-${{ hashFiles('tools/biomodels.txt', 'tools/fetch-biomodels.sh') }}
 
       - name: Fetch the BioModels
         run: tools/fetch-biomodels.sh biomodels

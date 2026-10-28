@@ -360,7 +360,12 @@ suite_cases <- function(dir) {
 # R CMD check limits tests to two); the test-suite workflow sets it.
 # Stochastic cases make a run vary only in their own rows.
 suite_run <- function(dir) {
-  run <- function(id) as.data.frame(suite_run_case(suite_case(dir, id)))
+  # Seeded per case, so the stochastic cases (equal-priority events run in
+  # random order) give the same result in every run and on any worker.
+  run <- function(id) {
+    set.seed(as.integer(id))
+    as.data.frame(suite_run_case(suite_case(dir, id)))
+  }
   ids <- suite_cases(dir)
   cores <- as.integer(Sys.getenv("ZUSBML_SUITE_CORES", "1"))
   rows <- if (cores > 1 && .Platform$OS.type == "unix") {

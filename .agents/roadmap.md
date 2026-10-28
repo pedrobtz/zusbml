@@ -290,12 +290,18 @@ and generated ones.
 - The property test runs in CI.
 - `R CMD check` passes on the quick r-actions profile.
 
-**Deviations, 2026-10-28.** The fifty BioModels are the first that read,
-round-trip and derive among the first 400 curated models in Level 3 or Level
-2 Version 4 (2 and 48; `tools/biomodels.txt`): 181 of those 400 are Level 2
-Versions 1 to 3, out of scope (D18). `zufuzz` is not on CRAN or usable yet,
-so no fuzz targets. The §10 targets are measured and recorded in the design;
-only the Test Suite one is met.
+**Deviations, 2026-10-28.** The fifty BioModels come from the BioModels
+Database release 31 archive (2017-06-26), pinned by checksum, because the live
+download service answers CI runners with 403: its 3 Level 3 models and the
+first 47 Level 2 Version 4 ones that read, round-trip and derive
+(`tools/biomodels.txt`). Of the release's 640 curated models, 440 are in scope
+and 418 pass; the rest are refused for packages, fast reactions, `delay` or
+undefined values. 200 are Level 2 Versions 1 to 3, out of scope (D18),
+including the design's own example `BIOMD0000000012` in its current form.
+`zufuzz` is not on CRAN or usable yet, so no fuzz targets. The §10 targets are
+measured and recorded in the design; only the Test Suite one is met.
+Stochastic Test Suite cases are seeded by case id (01590 missed once in CI
+unseeded; all pass seeded and under six other seeds).
 
 **Design.** §6.4, §7, §9, §10, §15 Q4.
 
