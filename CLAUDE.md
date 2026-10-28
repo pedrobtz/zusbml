@@ -86,9 +86,23 @@ ZUSBML_TEST_SUITE=$PWD/sbml-test-suite \
 
 ## Architecture
 
-To be written as stages land; see `.agents/design.md` §4 for the planned five
-layers (document, MathML, model object, semantics, validation). There is no
-native code: v0.1.0 is pure R (design D2), so there is no `src/`.
+Design §4 has the five layers (document, MathML, model object, semantics,
+validation). Built so far:
+
+- [R/spec.R](R/spec.R) is the table of Level 3 core elements: each one's
+  attributes (type, required) and allowed children. The reader walks
+  documents against it, so supporting a new attribute or element means one
+  entry here, and anything absent from it is a `zusbml_parse_error`.
+- [R/read.R](R/read.R) parses with `zuxml`, settles level and version from
+  the namespace, refuses or drops SBML packages, and turns each element into
+  a list of typed attributes, SBase fields and children.
+- [R/model.R](R/model.R) builds the `sbml_model`: one data frame per element
+  kind, list columns for math and nested parts, accessors and printing.
+- [R/conditions.R](R/conditions.R) builds the classed conditions of design
+  §8; their fields (`path`, `attribute`, `section`, `package`) are what tests
+  assert on.
+
+There is no native code: v0.1.0 is pure R (design D2), so there is no `src/`.
 
 ## Invariants that are easy to break
 
