@@ -153,7 +153,7 @@ math_child <- function(expr, ids) {
 
 rows <- function(df) {
   lapply(seq_len(nrow(df)), function(i) {
-    lapply(df, function(col) if (is.list(col)) col[[i]] else col[[i]])
+    lapply(df, function(col) col[[i]])
   })
 }
 
