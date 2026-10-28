@@ -20,8 +20,20 @@ questions (Q1 to Q5) are still open.
 
 ## Current state
 
-Scaffolded 2026-10-28 with `create-pkg.sh`; no functionality yet. The roadmap
-in `.agents/roadmap.md` takes it to v0.1.0.
+Version 0.1.0, ready for its first CRAN submission (2026-10-28). Every
+roadmap stage is done, and the critical review's blocking and required
+findings are fixed. Verified 2026-10-28:
+
+- All 1,384 supported SBML Test Suite 3.5.0 cases reproduce their reference
+  results, the other 308 are refused, and every readable case survives read,
+  write and read unchanged; 1,028 also pass from their Level 2 Version 5
+  file.
+- Fifty BioModels (release 31) read, round-trip, derive and check clean.
+- `R CMD check --as-cran` is clean on every r-actions leg.
+
+Not built in 0.1.0: algebraic rules, `delay` and fast reactions in
+derivation; SBML packages; Level 1 and Level 2 before Version 4; unit
+checks. Performance is below the design's targets (design §10).
 
 ## Stage tracking
 
