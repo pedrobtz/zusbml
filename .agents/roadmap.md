@@ -22,7 +22,7 @@ portfolio's.
 | 3 | [MathML](#stage-3--mathml) | quick | [#5](https://github.com/pedrobtz/zusbml/issues/5) | [#18](https://github.com/pedrobtz/zusbml/pull/18) | 2026-10-28 |
 | 4 | [Derivation without events](#stage-4--derivation-without-events) | quick | [#6](https://github.com/pedrobtz/zusbml/issues/6) | [#19](https://github.com/pedrobtz/zusbml/pull/19) | 2026-10-28 |
 | 5 | [Events and solver interfaces](#stage-5--events-and-solver-interfaces) | quick | [#7](https://github.com/pedrobtz/zusbml/issues/7) | [#20](https://github.com/pedrobtz/zusbml/pull/20) | 2026-10-28 |
-| 6 | [Writer and structural checks](#stage-6--writer-and-structural-checks) | quick | [#8](https://github.com/pedrobtz/zusbml/issues/8) | | 2026-10-28 |
+| 6 | [Writer and structural checks](#stage-6--writer-and-structural-checks) | quick | [#8](https://github.com/pedrobtz/zusbml/issues/8) | [#21](https://github.com/pedrobtz/zusbml/pull/21) | 2026-10-28 |
 | 7 | [Level 2, BioModels and property test](#stage-7--level-2-biomodels-and-property-test) | quick | [#9](https://github.com/pedrobtz/zusbml/issues/9) | | |
 | 8 | [Documentation](#stage-8--documentation) | quick | [#10](https://github.com/pedrobtz/zusbml/issues/10) | | |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zusbml/issues/11) | | |
