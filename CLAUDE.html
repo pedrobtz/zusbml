@@ -19,6 +19,7 @@
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="search.json"></form></li>
+<li class="nav-item"><a class="external-link nav-link" href="https://github.com/pedrobtz/zusbml/" aria-label="GitHub"><span class="fa fab fa-github fa-lg"></span></a></li>
       </ul></div>
 
 
@@ -28,7 +29,7 @@
   <main id="main" class="col-md-9"><div class="page-header">
 
       <h1>CLAUDE.md</h1>
-
+      <small class="dont-index">Source: <a href="https://github.com/pedrobtz/zusbml/blob/main/CLAUDE.md" class="external-link"><code>CLAUDE.md</code></a></small>
     </div>
 
 <div id="claudemd" class="section level1">
@@ -85,7 +86,7 @@
 <h2 id="invariants-that-are-easy-to-break">Invariants that are easy to break<a class="anchor" aria-label="anchor" href="#invariants-that-are-easy-to-break"></a></h2>
 <p>These are fixed by the design before any code exists.</p>
 <ul><li>
-<strong><code>Imports: zuxml</code> only</strong> (D3, §12). Anything else goes in <code>Suggests</code> (<code>zupkode</code>, <code>daffiz</code>, <code>zujson</code>, deSolve for CI) and is called behind a <code><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace()</a></code> check. Adding an import breaks a release criterion.</li>
+<strong><code>Imports: zuxml</code> only</strong> (D3, §12). Anything else goes in <code>Suggests</code> (deSolve, <code>zujson</code>) and is called behind a <code><a href="https://rdrr.io/r/base/ns-load.html" class="external-link">requireNamespace()</a></code> check. Adding an import breaks a release criterion.</li>
 <li>
 <strong>No libSBML, anywhere</strong> (D4): not vendored, not a system dependency, not a CI job.</li>
 <li>
@@ -197,7 +198,7 @@
 
 
     <footer><div class="pkgdown-footer-left">
-  <p>Developed by First Last.</p>
+  <p>Developed by Pedro Baltazar.</p>
 </div>
 
 <div class="pkgdown-footer-right">

@@ -1,6 +1,8 @@
 # zusbml
 
-The goal of zusbml is to …
+zusbml reads SBML models into R, writes them back, and derives the
+equations a solver needs. It is under development; see the
+[roadmap](https://github.com/pedrobtz/zusbml/blob/main/.agents/roadmap.md).
 
 ## Installation
 
@@ -11,14 +13,4 @@ You can install the development version of zusbml from
 
 # install.packages("pak")
 pak::pak("pedrobtz/zusbml")
-```
-
-## Example
-
-This is a basic example which shows you how to solve a common problem:
-
-``` r
-
-library(zusbml)
-## basic example code
 ```

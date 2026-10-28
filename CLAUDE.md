@@ -92,7 +92,7 @@ There is no native code: v0.1.0 is pure R (design D2), so there is no
 These are fixed by the design before any code exists.
 
 - **`Imports: zuxml` only** (D3, §12). Anything else goes in `Suggests`
-  (`zupkode`, `daffiz`, `zujson`, deSolve for CI) and is called behind a
+  (deSolve, `zujson`) and is called behind a
   [`requireNamespace()`](https://rdrr.io/r/base/ns-load.html) check.
   Adding an import breaks a release criterion.
 - **No libSBML, anywhere** (D4): not vendored, not a system dependency,

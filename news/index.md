@@ -1,5 +1,6 @@
 # Changelog
 
-## zusbml (development version)
+## zusbml 0.0.0.9000
 
-- Initial CRAN submission.
+- Package identity: title, description and authors set; no user-facing
+  functions yet.
