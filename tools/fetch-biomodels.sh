@@ -13,8 +13,11 @@ mkdir -p "$dest"
 for id in $(grep -v '^#' "$list"); do
   file="$dest/$id.xml"
   [ -s "$file" ] && continue
-  curl -fsSL --retry 3 -o "$file.tmp" \
-    "https://www.ebi.ac.uk/biomodels/model/download/$id?filename=${id}_url.xml"
+  # biomodels.org is where www.ebi.ac.uk/biomodels redirects downloads; an
+  # anonymous client gets 403 from CI runners there.
+  curl -fsSL --retry 3 -A "zusbml (https://github.com/pedrobtz/zusbml)" \
+    -o "$file.tmp" \
+    "https://www.biomodels.org/model/download/$id?filename=${id}_url.xml"
   mv "$file.tmp" "$file"
 done
 echo "$(ls "$dest"/*.xml | wc -l | tr -d ' ') BioModels in $dest"
