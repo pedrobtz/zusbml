@@ -186,6 +186,7 @@ test_that("suite_run_case() reports a package document as refused", {
 })
 
 test_that("suite_run() returns one row per case with a status", {
+  withr::local_envvar(ZUSBML_SUITE_SHARD = NA)
   report <- suite_run(fixture_suite())
 
   expect_named(report, c("id", "category", "status", "message", "level2"))

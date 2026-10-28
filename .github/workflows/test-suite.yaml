@@ -4,7 +4,9 @@
 on:
   push:
     branches: [main, master]
+  # `labeled` so that adding `full-ci` reruns it with every case.
   pull_request:
+    types: [opened, synchronize, reopened, labeled]
 
 name: test-suite
 
@@ -17,12 +19,22 @@ concurrency:
 jobs:
   test-suite:
     runs-on: ubuntu-latest
+    name: test-suite (${{ matrix.shard }})
+    # Two shards keep each job under five minutes.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/2", "2/2"]
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       ZUSBML_TEST_SUITE: ${{ github.workspace }}/sbml-test-suite
       ZUSBML_REQUIRE_SUITE: "true"
       ZUSBML_SUITE_REPORT: ${{ github.workspace }}/suite-report.csv
       ZUSBML_SUITE_CORES: "4"
+      ZUSBML_SUITE_SHARD: ${{ matrix.shard }}
+      # Quick on pull requests: 00966 alone takes minutes (10^5 events), so it
+      # runs on main and with the full-ci label, as the r-actions profiles do.
+      ZUSBML_SUITE_SKIP: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && '00966' || '' }}
     steps:
       - uses: actions/checkout@v6
 
@@ -49,7 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: suite-report
+          name: suite-report-${{ strategy.job-index }}
           path: suite-report.csv
           if-no-files-found: ignore
 

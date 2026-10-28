@@ -351,9 +351,57 @@ suite_math_drift <- function(m) {
   drift
 }
 
+# ZUSBML_SUITE_SHARD="i/n" keeps the i-th of n shards, so CI can split the
+# suite across jobs: ordinary cases are dealt out evenly, the slowest case
+# opens the first shard, and the other slow ones go to the rest.
 suite_cases <- function(dir) {
   ids <- list.files(dir, pattern = "^[0-9]{5}$")
-  ids[file.exists(file.path(dir, ids, paste0(ids, "-sbml-l3v2.xml")))]
+  ids <- ids[file.exists(file.path(dir, ids, paste0(ids, "-sbml-l3v2.xml")))]
+  # ZUSBML_SUITE_SKIP names cases a quick CI run leaves out (the workflow
+  # skips 00966 on pull requests without the full-ci label).
+  skip <- strsplit(Sys.getenv("ZUSBML_SUITE_SKIP"), "[, ]+")[[1]]
+  ids <- setdiff(ids, skip)
+  shard <- suite_shard()
+  if (shard[[2]] == 1) {
+    return(ids)
+  }
+  deal <- function(x) x[seq_along(x) %% shard[[2]] == shard[[1]] %% shard[[2]]]
+  # 00966 fires about 10^5 events and alone takes as long as half the
+  # suite on four cores, so it opens the first shard and the other slow
+  # cases are dealt among the rest.
+  heavy <- "00966"
+  slow <- suite_slow(dir, ids) & ids != heavy
+  first <- if (shard[[1]] == 1) intersect(heavy, ids)
+  others <- if (shard[[1]] == 1) {
+    character(0)
+  } else {
+    rest <- ids[slow]
+    rest[
+      seq_along(rest) %% (shard[[2]] - 1) ==
+        (shard[[1]] - 1) %% (shard[[2]] - 1)
+    ]
+  }
+  sort(c(first, others, deal(ids[!slow & ids != heavy])))
+}
+
+# The stochastic cases fire up to 10^5 events and take minutes.
+suite_slow <- function(dir, ids) {
+  vapply(
+    ids,
+    function(id) {
+      tags <- readLines(
+        file.path(dir, id, paste0(id, "-model.m")),
+        warn = FALSE
+      )
+      any(grepl("RandomEventExecution", tags, fixed = TRUE))
+    },
+    logical(1)
+  )
+}
+
+suite_shard <- function() {
+  shard <- Sys.getenv("ZUSBML_SUITE_SHARD", "1/1")
+  as.integer(strsplit(shard, "/", fixed = TRUE)[[1]])
 }
 
 # Cases run in parallel on ZUSBML_SUITE_CORES cores (default 1, as
@@ -369,7 +417,17 @@ suite_run <- function(dir) {
   ids <- suite_cases(dir)
   cores <- as.integer(Sys.getenv("ZUSBML_SUITE_CORES", "1"))
   rows <- if (cores > 1 && .Platform$OS.type == "unix") {
-    parallel::mclapply(ids, run, mc.cores = cores)
+    # Start the slow cases first and hand out cases one at a time, so the
+    # other workers take the rest meanwhile.
+    slow <- suite_slow(dir, ids)
+    order <- c(ids[slow], ids[!slow])
+    rows <- parallel::mclapply(
+      order,
+      run,
+      mc.cores = cores,
+      mc.preschedule = FALSE
+    )
+    rows[match(ids, order)]
   } else {
     lapply(ids, run)
   }

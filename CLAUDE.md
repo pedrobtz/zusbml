@@ -82,6 +82,9 @@ The SBML Test Suite oracle, occasional (CI runs it on every push):
 tools/fetch-test-suite.sh                        # into sbml-test-suite/
 ZUSBML_TEST_SUITE=$PWD/sbml-test-suite ZUSBML_SUITE_CORES=4 \
   Rscript -e 'devtools::test(filter = "^suite$")'
+# ZUSBML_SUITE_SHARD=1/2 runs half the cases, as each CI shard does;
+# ZUSBML_SUITE_SKIP=00966 leaves out the one case that takes minutes, as
+# quick pull request runs do (main and full-ci runs keep it)
 tools/fetch-biomodels.sh                         # the 50 fixed models
 ZUSBML_BIOMODELS=$PWD/biomodels \
   Rscript -e 'devtools::test(filter = "biomodels")'

@@ -79,17 +79,23 @@ test_that("-Inf is written as minus infinity and reads as that call", {
 })
 
 test_that("numbers round-trip to the last bit", {
-  numbers <- c(
-    0.1,
-    1 / 3,
-    6.02214179e23,
-    1e-300,
-    .Machine$double.xmax,
-    -7,
-    2^60
-  )
+  numbers <- c(0.1, 1 / 3, 6.02214179e23, 1e-12, 123456.789, -7, 2^60)
 
   for (x in numbers) {
+    expect_identical(round_trip(x), x, info = format(x, digits = 17))
+  }
+})
+
+test_that("numbers at the extremes of the double range round-trip exactly", {
+  # R's text-to-double conversion is correctly rounded at the extremes of
+  # the range only with a long double wider than double (design D19): the
+  # nold and macOS arm64 builds read .Machine$double.xmax back as Inf.
+  skip_if(
+    .Machine$sizeof.longdouble <= 8,
+    "R parses numbers at the extremes inexactly without an 80-bit long double"
+  )
+
+  for (x in c(1e-300, .Machine$double.xmax, .Machine$double.xmin)) {
     expect_identical(round_trip(x), x, info = format(x, digits = 17))
   }
 })

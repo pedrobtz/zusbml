@@ -436,6 +436,13 @@ decides it and the maintainer may overturn it.
   and Level 1 are refused. In the first 400 curated BioModels, 214 are Level 2
   Version 4 and 5 Level 3; 181 are Level 2 Versions 1 to 3, the design's own
   example `BIOMD0000000012` among them.
+- **D19 (M, 2026-10-28, Stage 9).** Numbers round-trip exactly through MathML
+  and attributes where R's text-to-double conversion is correctly rounded:
+  everywhere for ordinary values, and at the extremes of the double range
+  (1e-300, `.Machine$double.xmax`) only with a long double wider than double.
+  Without one (CRAN's nold build, macOS arm64) R reads the largest double back
+  as `Inf` and the smallest normal ones off in the last bits; the test of the
+  extremes skips there, and the package does not reimplement decimal parsing.
 - **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
   in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
   added after it is.
