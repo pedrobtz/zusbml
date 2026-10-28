@@ -13,10 +13,11 @@ sbml_check(m)
 A data frame with one row per finding: \code{rule} (\code{"duplicate_id"},
 \code{"unknown_reference"}, \code{"multiple_definitions"}, \code{"constant_target"} or
 \code{"assignment_cycle"}), the \code{id} concerned, and a \code{message}. No rows when
-the model passes. \code{sbml_check()} never raises.
+the model passes. For an \code{sbml_model}, \code{sbml_check()} never raises; it
+raises \code{zusbml_arg_error} for anything else.
 }
 \description{
-Checks the structural rules derivation relies on (design section 4.5):
+Checks the structural rules derivation relies on:
 ids are unique, references resolve, a symbol is set by at most one rule
 (or by reactions and not also by a rule), rules and events do not change
 constants, and assignment rules do not form a cycle. This is not

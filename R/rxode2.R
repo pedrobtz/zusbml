@@ -3,12 +3,13 @@
 #' Prints the derived equations ([sbml_odes()]) in the model syntax of the
 #' rxode2 package: constants and assignments as `x = ...;`, initial
 #' conditions as `x(0) = ...;` and right-hand sides as `d/dt(x) = ...;`. The
-#' text is self-contained; edit the constants or pass parameters to override
-#' them.
+#' text is self-contained. Initial conditions are numbers computed from the
+#' model's constants, so an initial value that depends on a constant does
+#' not follow a parameter you pass to rxode2; edit the text instead.
 #'
 #' rxode2 text cannot express SBML events, which change states at triggered
 #' times, so a model with events is refused unless `events = "drop"`, which
-#' writes the continuous part only (design D10). Names rxode2 cannot take,
+#' writes the continuous part only. Names rxode2 cannot take,
 #' ids starting with `_` and those it reserves such as `time` or `param`, are
 #' written with a `.u` prefix: `_J0` becomes `.u_J0`.
 #'

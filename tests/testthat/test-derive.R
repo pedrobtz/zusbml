@@ -358,5 +358,5 @@ test_that("the derived equations integrate to the analytic solution", {
 })
 
 test_that("sbml_odes() refuses anything but a model", {
-  expect_error(sbml_odes(list()))
+  expect_error(sbml_odes(list()), class = "zusbml_arg_error")
 })

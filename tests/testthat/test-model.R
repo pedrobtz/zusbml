@@ -42,7 +42,11 @@ test_that("accessors refuse anything but a model", {
   )
 
   for (accessor in accessors) {
-    expect_error(accessor(list()))
+    expect_error(
+      accessor(list()),
+      class = "zusbml_arg_error",
+      info = deparse(accessor)[[1]]
+    )
   }
 })
 

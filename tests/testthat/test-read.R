@@ -193,9 +193,17 @@ test_that("ignore_packages = TRUE reads the core and records what was dropped", 
 })
 
 test_that("sbml_read() checks its arguments", {
-  expect_error(sbml_read(1))
-  expect_error(sbml_read(sbml_doc(), ignore_packages = NA))
-  expect_error(sbml_read(file.path(withr::local_tempdir(), "missing.xml")))
+  err <- expect_error(sbml_read(1), class = "zusbml_arg_error")
+  expect_equal(err$argument, "x")
+  err <- expect_error(
+    sbml_read(sbml_doc(), ignore_packages = NA),
+    class = "zusbml_arg_error"
+  )
+  expect_equal(err$argument, "ignore_packages")
+  expect_error(
+    sbml_read(file.path(withr::local_tempdir(), "missing.xml")),
+    class = "zusbml_arg_error"
+  )
 })
 
 test_that("sbml_read() keeps notes and annotation as XML text", {

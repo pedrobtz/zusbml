@@ -19,13 +19,14 @@ A single string of rxode2 model code.
 Prints the derived equations (\code{\link[=sbml_odes]{sbml_odes()}}) in the model syntax of the
 rxode2 package: constants and assignments as \code{x = ...;}, initial
 conditions as \code{x(0) = ...;} and right-hand sides as \code{d/dt(x) = ...;}. The
-text is self-contained; edit the constants or pass parameters to override
-them.
+text is self-contained. Initial conditions are numbers computed from the
+model's constants, so an initial value that depends on a constant does
+not follow a parameter you pass to rxode2; edit the text instead.
 }
 \details{
 rxode2 text cannot express SBML events, which change states at triggered
 times, so a model with events is refused unless \code{events = "drop"}, which
-writes the continuous part only (design D10). Names rxode2 cannot take,
+writes the continuous part only. Names rxode2 cannot take,
 ids starting with \verb{_} and those it reserves such as \code{time} or \code{param}, are
 written with a \code{.u} prefix: \verb{_J0} becomes \code{.u_J0}.
 }

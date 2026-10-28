@@ -120,7 +120,7 @@ test_that("math with no MathML equivalent is a write error", {
 })
 
 test_that("sbml_write() refuses anything but a model", {
-  expect_error(sbml_write(list()))
+  expect_error(sbml_write(list()), class = "zusbml_arg_error")
 })
 
 test_that("tabs and newlines in attribute values survive a round trip", {

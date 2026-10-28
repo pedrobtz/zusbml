@@ -22,7 +22,11 @@ belongs to, and its \code{kind} (\code{"species"}, \code{"compartment"}, ...);
 \item \code{constants}: a named numeric vector of the constants' values;
 \item \code{initial}: the states' values at time 0, as \code{sbml_initial_state()};
 \item \code{species}: for each species, whether its symbol is an amount and its
-compartment, to convert between amounts and concentrations.
+compartment, to convert between amounts and concentrations;
+\item \code{events}: one list per event with its \code{id}, \code{trigger},
+\code{initial_value}, \code{persistent}, \code{priority} and \code{delay} expressions
+(\code{NULL} when absent), \code{use_values_from_trigger_time}, and
+\code{assignments}, a named list of expressions by target.
 }
 
 \code{sbml_initial_state()} returns a named numeric vector.
@@ -46,10 +50,10 @@ side it refers to.
 
 \itemize{
 \item \code{zusbml_unsupported} for algebraic rules (the model is then a DAE),
-the \code{delay} csymbol, fast reactions, and events, each naming the
-element.
-\item \code{zusbml_derive_error} for an assignment cycle or a missing value,
-naming the ids involved in its \code{ids} field.
+the \code{delay} csymbol and fast reactions, each naming the element.
+\item \code{zusbml_derive_error} for an assignment cycle, a missing value, or a
+name the model does not define, naming the ids involved in its \code{ids}
+field.
 }
 }
 

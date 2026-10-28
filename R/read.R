@@ -1,8 +1,9 @@
 #' Read an SBML document
 #'
-#' Reads an SBML Level 3 core document into an `sbml_model`. Every element
-#' carries the attributes the specification defines for the document's level
-#' and version; optional values without a Level 3 default read as `NA`.
+#' Reads an SBML core document into an `sbml_model`: Level 3 Versions 1 and
+#' 2, and Level 2 Versions 4 and 5, which are mapped to their Level 3
+#' meaning. Every element carries the attributes Level 3 defines; optional
+#' values without a default read as `NA`.
 #'
 #' @param x A file path, a `file://`, `http://` or `https://` URL, a string
 #'   holding the XML itself, or a raw vector.
@@ -16,7 +17,10 @@
 #'   attribute in the SBML namespace, a missing required attribute, or a
 #'   value of the wrong type. Its `path` field names the element, for
 #'   example `model/listOfSpecies/species[3]`, and `attribute` the attribute.
-#' * `zusbml_unsupported` for SBML packages and for levels other than 3.
+#' * `zusbml_unsupported` for SBML packages, Level 1, and Level 2 before
+#'   Version 4.
+#' * `zusbml_arg_error` for an argument of the wrong type, a missing file or
+#'   a directory.
 #' @export
 #' @examples
 #' path <- system.file("extdata", "decay.xml", package = "zusbml")
@@ -29,7 +33,7 @@ sbml_read <- function(x, ignore_packages = FALSE) {
       length(ignore_packages) != 1 ||
       is.na(ignore_packages)
   ) {
-    stop("`ignore_packages` must be TRUE or FALSE.", call. = FALSE)
+    abort_arg("`ignore_packages` must be TRUE or FALSE.", "ignore_packages")
   }
   input <- read_input(x)
   doc <- tryCatch(
@@ -112,7 +116,7 @@ read_input <- function(x) {
     return(list(content = x, file = NA_character_))
   }
   if (!is.character(x) || length(x) != 1 || is.na(x)) {
-    stop("`x` must be a path, a URL, XML text or a raw vector.", call. = FALSE)
+    abort_arg("`x` must be a path, a URL, XML text or a raw vector.", "x")
   }
   if (grepl("^\\s*<", x)) {
     return(list(content = x, file = NA_character_))
