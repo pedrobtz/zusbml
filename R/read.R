@@ -180,8 +180,9 @@ package_from_ns <- function(ns) {
 }
 
 # One element, checked against its specification. Returns its typed
-# attributes, its SBase fields, and its children: serialized text for <math>
-# and <message>, a list for listOf containers, and a parsed
+# attributes, its SBase fields, and its children: the R expression for
+# <math> (wrapped in a list, since it may be NULL), serialized text for
+# <message>, a list for listOf containers, and a parsed
 # element for single children such as <kineticLaw>.
 read_element <- function(node, kind, path, ctx) {
   spec <- element_spec(kind, ctx$version)
@@ -252,8 +253,7 @@ read_element <- function(node, kind, path, ctx) {
 
 read_child <- function(node, local, path, ctx) {
   if (local == "math") {
-    # Serialized MathML until Stage 3 turns it into R expressions.
-    return(zuxml::xml_serialize(node))
+    return(list(mathml_to_r(node, path, ctx$file)))
   }
   if (local == "message") {
     return(zuxml::xml_serialize(node))

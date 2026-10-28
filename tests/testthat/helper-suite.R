@@ -125,7 +125,8 @@ suite_has <- function(name) {
 }
 
 # One case through as much of the pipeline as exists: "pending" before the
-# reader, "read" before derivation, then "pass" or "fail" for supported
+# reader, "read" (once its math survives R -> MathML -> R) before
+# derivation, then "pass" or "fail" for supported
 # cases and "refused" or "fail" for unsupported ones. Any condition that is
 # not a zusbml condition is "error".
 suite_run_case <- function(case) {
@@ -161,7 +162,51 @@ suite_run_case <- function(case) {
     }
     return(result(status, conditionMessage(outcome)))
   }
+  drift <- suite_math_drift(model)
+  if (length(drift) > 0) {
+    return(result("fail", paste("MathML round trip changed:", drift[[1]])))
+  }
   result(outcome)
+}
+
+# Every expression in a model.
+suite_model_math <- function(m) {
+  laws <- lapply(m$reactions$kinetic_law, function(k) k$math)
+  parts <- unlist(
+    lapply(c("trigger", "priority", "delay"), function(p) {
+      lapply(m$events[[p]], function(x) x$math)
+    }),
+    recursive = FALSE
+  )
+  assignments <- unlist(
+    lapply(m$events$assignments, function(a) a$math),
+    recursive = FALSE
+  )
+  all <- c(
+    m$functions$math,
+    m$initial_assignments$math,
+    m$rules$math,
+    m$constraints$math,
+    laws,
+    parts,
+    assignments
+  )
+  Filter(Negate(is.null), all)
+}
+
+# Expressions that do not survive R -> MathML -> R unchanged, deparsed.
+suite_math_drift <- function(m) {
+  r_to_mathml <- utils::getFromNamespace("r_to_mathml", "zusbml")
+  mathml_to_r <- utils::getFromNamespace("mathml_to_r", "zusbml")
+  drift <- character(0)
+  for (expr in suite_model_math(m)) {
+    text <- r_to_mathml(expr)
+    back <- mathml_to_r(zuxml::xml_root(zuxml::xml_parse(text)))
+    if (!identical(back, expr)) {
+      drift <- c(drift, paste(deparse(expr), collapse = " "))
+    }
+  }
+  drift
 }
 
 suite_cases <- function(dir) {

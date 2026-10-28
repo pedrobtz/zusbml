@@ -7,4 +7,10 @@
   and attribute; SBML packages and other levels raise `zusbml_unsupported`,
   and `ignore_packages = TRUE` reads the core of a package document.
 
+* Model math is R language objects: `<apply><power/>` is `^`, `<piecewise>`
+  is nested `if`, lambdas are `function` expressions, and operators without
+  a base R equivalent keep their SBML names (`quotient()`, `rateOf()`,
+  ...). `sbml_math()` shows math as R code, and `sbml_functions()` adds each
+  function definition as a callable R function.
+
 * `zusbml_info()` reports what the package reads and writes.
