@@ -84,7 +84,16 @@
 </div>
 <div class="section level2">
 <h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a></h2>
-<p>To be written as stages land; see <code>.agents/design.md</code> §4 for the planned five layers (document, MathML, model object, semantics, validation). There is no native code: v0.1.0 is pure R (design D2), so there is no <code>src/</code>.</p>
+<p>Design §4 has the five layers (document, MathML, model object, semantics, validation). Built so far:</p>
+<ul><li>
+<a href="R/spec.R">R/spec.R</a> is the table of Level 3 core elements: each one’s attributes (type, required) and allowed children. The reader walks documents against it, so supporting a new attribute or element means one entry here, and anything absent from it is a <code>zusbml_parse_error</code>.</li>
+<li>
+<a href="R/read.R">R/read.R</a> parses with <code>zuxml</code>, settles level and version from the namespace, refuses or drops SBML packages, and turns each element into a list of typed attributes, SBase fields and children.</li>
+<li>
+<a href="R/model.R">R/model.R</a> builds the <code>sbml_model</code>: one data frame per element kind, list columns for math and nested parts, accessors and printing.</li>
+<li>
+<a href="R/conditions.R">R/conditions.R</a> builds the classed conditions of design §8; their fields (<code>path</code>, <code>attribute</code>, <code>section</code>, <code>package</code>) are what tests assert on.</li>
+</ul><p>There is no native code: v0.1.0 is pure R (design D2), so there is no <code>src/</code>.</p>
 </div>
 <div class="section level2">
 <h2 id="invariants-that-are-easy-to-break">Invariants that are easy to break<a class="anchor" aria-label="anchor" href="#invariants-that-are-easy-to-break"></a></h2>
