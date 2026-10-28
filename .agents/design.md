@@ -245,8 +245,9 @@ Two oracles, neither vendored nor committed:
   Unpacked it is about 37 MB in 17,000 files, too big to commit (D5).
   For every semantic case whose tags are within the supported set, the
   Level 3 Version 2 file is read, derived, run from the settings file's
-  `start`, `duration` and `steps`, and the named `variables` are compared with the results CSV under its `absolute` and
-  `relative` tolerances by a test helper applying the suite's rule,
+  `start`, `duration` and `steps`, and the named `variables` are
+  compared with the results CSV under its `absolute` and `relative`
+  tolerances by a test helper applying the suite's rule,
   `|actual - expected| <= absolute + relative * |expected|` (D12). The
   runner is deSolve (D13). Cases with unsupported tags
   (`AlgebraicRule`, `Delay`, `comp`, `fbc`) are asserted to be refused,
