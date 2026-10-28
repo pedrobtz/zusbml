@@ -4,13 +4,16 @@
 \alias{sbml_derivs}
 \title{A derivative function for deSolve}
 \usage{
-sbml_derivs(m, outputs = character(0))
+sbml_derivs(m, outputs = character(0), parms = NULL)
 }
 \arguments{
 \item{m}{An \code{sbml_model}.}
 
 \item{outputs}{Model symbols to report as extra columns of the solver
 output, such as species defined by assignment rules or reaction rates.}
+
+\item{parms}{A named numeric vector of constants to use instead of the
+model's values, or \code{NULL}.}
 }
 \value{
 A function with attributes \code{y0}, \code{parms}, and for models with
@@ -29,6 +32,11 @@ events at the same time.
 The function keeps the event queue between calls. Use it for one
 integration starting at time 0; calling it again at time 0 restarts the
 queue.
+
+To change constants, pass them in \code{parms} here rather than editing the
+\code{parms} attribute: initial assignments and events at time 0 that depend
+on them are then reflected in \code{y0}. The function and its events always
+use the \code{parms} the solver passes.
 }
 \examples{
 \dontshow{if (requireNamespace("deSolve", quietly = TRUE)) withAutoprint(\{ # examplesIf}

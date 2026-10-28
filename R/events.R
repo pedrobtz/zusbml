@@ -72,9 +72,16 @@ derive_events <- function(m, roles, rhs, assignments) {
 #' integration starting at time 0; calling it again at time 0 restarts the
 #' queue.
 #'
+#' To change constants, pass them in `parms` here rather than editing the
+#' `parms` attribute: initial assignments and events at time 0 that depend
+#' on them are then reflected in `y0`. The function and its events always
+#' use the `parms` the solver passes.
+#'
 #' @inheritParams sbml_odes
 #' @param outputs Model symbols to report as extra columns of the solver
 #'   output, such as species defined by assignment rules or reaction rates.
+#' @param parms A named numeric vector of constants to use instead of the
+#'   model's values, or `NULL`.
 #' @return A function with attributes `y0`, `parms`, and for models with
 #'   events `rootfunc` and `events`.
 #' @export
@@ -82,8 +89,30 @@ derive_events <- function(m, roles, rhs, assignments) {
 #' m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))
 #' f <- sbml_derivs(m)
 #' deSolve::ode(attr(f, "y0"), seq(0, 2, by = 0.5), f, attr(f, "parms"))
-sbml_derivs <- function(m, outputs = character(0)) {
-  eq <- sbml_odes(m)
+sbml_derivs <- function(m, outputs = character(0), parms = NULL) {
+  check_model(m)
+  if (!is.character(outputs) || anyNA(outputs)) {
+    abort_arg("`outputs` must be a character vector without NA.", "outputs")
+  }
+  if (
+    !is.null(parms) &&
+      (!is.numeric(parms) || is.null(names(parms)) || anyNA(names(parms)))
+  ) {
+    abort_arg("`parms` must be a named numeric vector or NULL.", "parms")
+  }
+  eq <- derive_odes(m, parms)
+  known <- c(names(eq$constants), eq$states$name, names(eq$assignments))
+  unknown <- setdiff(outputs, known)
+  if (length(unknown) > 0) {
+    abort_arg(
+      paste0(
+        "`outputs` names ",
+        paste0("'", unknown, "'", collapse = ", "),
+        ", which the model does not define."
+      ),
+      "outputs"
+    )
+  }
   f <- derivs_function(eq, outputs)
   attr(f, "parms") <- eq$constants
   if (length(eq$events) == 0) {
@@ -159,7 +188,6 @@ event_engine <- function(eq) {
   events <- eq$events
   scope <- scope_function(eq)
   derivs <- derivs_function(eq)
-  parms <- eq$constants
   states <- eq$states$name
   atoms <- unlist(
     lapply(events, function(e) trigger_atoms(e$trigger)),
@@ -169,7 +197,10 @@ event_engine <- function(eq) {
   tol <- 1e-12
 
   state <- new.env(parent = emptyenv())
+  # The constants in force: those of the time 0 solve, then whatever the
+  # solver passes to the root function and the event handler.
   reset <- function() {
+    state$parms <- eq$constants
     state$previous <- vapply(events, function(e) e$initial_value, logical(1))
     state$pending <- list()
     state$next_time <- Inf
@@ -182,6 +213,12 @@ event_engine <- function(eq) {
   fire <- function(i, t, env) {
     e <- events[[i]]
     delay <- if (is.null(e$delay)) 0 else as.numeric(value_in(e$delay, env))
+    if (!is.finite(delay) || delay < 0) {
+      abort_derive(
+        paste0("Event '", e$id, "' has delay ", delay, " at time ", t, "."),
+        e$id
+      )
+    }
     values <- if (e$use_values_from_trigger_time) {
       lapply(e$assignments, function(x) as.numeric(value_in(x, env)))
     }
@@ -199,7 +236,7 @@ event_engine <- function(eq) {
   # compartment size at execution, before this event resizes anything, even
   # when its value was taken at trigger time.
   execute <- function(item, t, y) {
-    env <- scope(t, y, parms)
+    env <- scope(t, y, state$parms)
     values <- item$values %||%
       lapply(events[[item$event]]$assignments, function(x) {
         as.numeric(value_in(x, env))
@@ -222,13 +259,13 @@ event_engine <- function(eq) {
   # heading to.
   triggers_after <- function(t, y) {
     h <- 1e-9 * max(1, abs(t))
-    ahead <- if (length(y) > 0) y + h * derivs(t, y, parms)[[1]] else y
-    env <- scope(t + h, ahead, parms)
+    ahead <- if (length(y) > 0) y + h * derivs(t, y, state$parms)[[1]] else y
+    env <- scope(t + h, ahead, state$parms)
     vapply(events, function(e) truth(e$trigger, env), logical(1))
   }
 
   triggers_at <- function(t, y) {
-    env <- scope(t, y, parms)
+    env <- scope(t, y, state$parms)
     vapply(events, function(e) truth(e$trigger, env), logical(1))
   }
 
@@ -236,7 +273,7 @@ event_engine <- function(eq) {
   # in priority order, re-reading triggers after each.
   process <- function(t, y, read = triggers_after) {
     repeat {
-      env <- scope(t, y, parms)
+      env <- scope(t, y, state$parms)
       now <- read(t, y)
       for (i in seq_along(events)) {
         if (now[[i]] && !state$previous[[i]]) {
@@ -261,7 +298,9 @@ event_engine <- function(eq) {
         state$pending[due],
         function(p) {
           expr <- events[[p$event]]$priority
-          if (is.null(expr)) -Inf else as.numeric(value_in(expr, env))
+          value <- if (is.null(expr)) -Inf else as.numeric(value_in(expr, env))
+          # A priority that is NaN ranks below every number.
+          if (is.na(value)) -Inf else value
         },
         numeric(1)
       )
@@ -290,22 +329,30 @@ event_engine <- function(eq) {
       }
     },
     roots = function(.t, .y, .p) {
-      values <- atom_values(.t, .y, parms)
+      state$parms <- .p
+      values <- atom_values(.t, .y, state$parms)
       # LSODAR rejects a root function that is exactly zero where it starts
       # (time 0, after an event), and a trajectory can sit on a trigger's
       # boundary. Give such zeros the sign they have a step ahead, or 1.
+      # An atom that is NaN cannot cross zero; keep it away from a root.
+      values[is.na(values)] <- 1
       zero <- values == 0
       if (any(zero)) {
         h <- 1e-9 * max(1, abs(.t))
-        ahead <- if (length(.y) > 0) .y + h * derivs(.t, .y, parms)[[1]] else .y
-        values[zero] <- atom_values(.t + h, ahead, parms)[zero]
-        values[values == 0] <- 1
+        ahead <- if (length(.y) > 0) {
+          .y + h * derivs(.t, .y, state$parms)[[1]]
+        } else {
+          .y
+        }
+        values[zero] <- atom_values(.t + h, ahead, state$parms)[zero]
+        values[is.na(values) | values == 0] <- 1
       }
       # The earliest pending execution, even one the solver has stepped
       # past: the sign change from it is what stops the solver there.
       c(values, if (length(state$pending) > 0) .t - state$next_time else 1)
     },
     handle = function(.t, .y, .p) {
+      state$parms <- .p
       process(.t, .y)
     }
   )
