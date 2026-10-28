@@ -223,3 +223,11 @@ test_that("reading the same document twice gives identical objects", {
 
   expect_identical(sbml_read(doc), sbml_read(doc))
 })
+
+test_that("a directory is refused before reading", {
+  err <- expect_error(
+    sbml_read(withr::local_tempdir()),
+    class = "zusbml_arg_error"
+  )
+  expect_equal(err$argument, "x")
+})

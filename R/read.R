@@ -131,7 +131,10 @@ read_input <- function(x) {
     return(list(content = unlist(chunks), file = x))
   }
   if (!file.exists(x)) {
-    stop("File '", x, "' does not exist.", call. = FALSE)
+    abort_arg(paste0("File '", x, "' does not exist."), "x")
+  }
+  if (dir.exists(x)) {
+    abort_arg(paste0("'", x, "' is a directory, not a file."), "x")
   }
   list(content = readBin(x, "raw", file.size(x)), file = x)
 }
