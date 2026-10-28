@@ -175,6 +175,15 @@ These are fixed by the design before any code exists.
   Suite case must pass again after a write and re-read.
 - **One operator table drives MathML in both directions** (§6.2). Adding
   a mapping on one side only breaks the round trip.
+- **Model math never reaches base R** (design D20). It is evaluated only
+  in `math_env`, whose parent is the allowlist `math_base` and then the
+  empty environment; the reader only lets `<apply>` call function
+  definitions. A function added to the MathML table or to the compiled
+  derivative functions must be added to `math_base_names` too, or it
+  fails with “could not find function”. Never evaluate model math in an
+  environment that inherits from
+  [`baseenv()`](https://rdrr.io/r/base/environment.html) or the package
+  namespace.
 - **Internal names start with “.”** (`.amount.S1`, `.local.r1.k`,
   `.time`, the `.t`, `.y`, `.p` arguments). SBML ids cannot contain “.”,
   so these never collide with model symbols. Test Suite cases name

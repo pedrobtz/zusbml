@@ -136,6 +136,8 @@
 <li>
 <strong>One operator table drives MathML in both directions</strong> (§6.2). Adding a mapping on one side only breaks the round trip.</li>
 <li>
+<strong>Model math never reaches base R</strong> (design D20). It is evaluated only in <code>math_env</code>, whose parent is the allowlist <code>math_base</code> and then the empty environment; the reader only lets <code>&lt;apply&gt;</code> call function definitions. A function added to the MathML table or to the compiled derivative functions must be added to <code>math_base_names</code> too, or it fails with “could not find function”. Never evaluate model math in an environment that inherits from <code><a href="https://rdrr.io/r/base/environment.html" class="external-link">baseenv()</a></code> or the package namespace.</li>
+<li>
 <strong>Internal names start with “.”</strong> (<code>.amount.S1</code>, <code>.local.r1.k</code>, <code>.time</code>, the <code>.t</code>, <code>.y</code>, <code>.p</code> arguments). SBML ids cannot contain “.”, so these never collide with model symbols. Test Suite cases name symbols <code>time</code>, <code>pi</code> and <code>y</code>; a bare name of that kind broke derivation before (design D16).</li>
 <li>
 <strong>The Test Suite pass count only goes up.</strong> Stage 0 records the supported tags and the expected count per stage.</li>
