@@ -75,7 +75,11 @@ belongs to, and its <code>kind</code> (<code>"species"</code>, <code>"compartmen
 <li><p><code>constants</code>: a named numeric vector of the constants' values;</p></li>
 <li><p><code>initial</code>: the states' values at time 0, as <code>sbml_initial_state()</code>;</p></li>
 <li><p><code>species</code>: for each species, whether its symbol is an amount and its
-compartment, to convert between amounts and concentrations.</p></li>
+compartment, to convert between amounts and concentrations;</p></li>
+<li><p><code>events</code>: one list per event with its <code>id</code>, <code>trigger</code>,
+<code>initial_value</code>, <code>persistent</code>, <code>priority</code> and <code>delay</code> expressions
+(<code>NULL</code> when absent), <code>use_values_from_trigger_time</code>, and
+<code>assignments</code>, a named list of expressions by target.</p></li>
 </ul><p><code>sbml_initial_state()</code> returns a named numeric vector.</p>
     </div>
     <div class="section level2">
@@ -93,10 +97,10 @@ side it refers to.</p>
 
 
 <ul><li><p><code>zusbml_unsupported</code> for algebraic rules (the model is then a DAE),
-the <code>delay</code> csymbol, fast reactions, and events, each naming the
-element.</p></li>
-<li><p><code>zusbml_derive_error</code> for an assignment cycle or a missing value,
-naming the ids involved in its <code>ids</code> field.</p></li>
+the <code>delay</code> csymbol and fast reactions, each naming the element.</p></li>
+<li><p><code>zusbml_derive_error</code> for an assignment cycle, a missing value, or a
+name the model does not define, naming the ids involved in its <code>ids</code>
+field.</p></li>
 </ul></div>
 
     <div class="section level2">
