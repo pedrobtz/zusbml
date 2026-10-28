@@ -94,6 +94,10 @@
 <li>
 <a href="R/derive.R">R/derive.R</a> is <code><a href="reference/sbml_odes.html">sbml_odes()</a></code>: it gives every symbol one role (constant, assignment or state), builds right-hand sides from reactions and rate rules, orders assignments by dependency, and solves time 0 as one system of initial assignments, assignment rules and defaults. <code>derivs_function()</code> compiles the result into a <code>function(.t, .y, .p)</code>.</li>
 <li>
+<a href="R/events.R">R/events.R</a> derives events and builds <code><a href="reference/sbml_derivs.html">sbml_derivs()</a></code>’s event engine: compiled root functions over each trigger’s relational atoms, and a handler that applies section 4.12 (delays, persistence, priorities, cascades). Its state lives in a closure and restarts at time 0.</li>
+<li>
+<a href="R/rxode2.R">R/rxode2.R</a> prints derived equations as rxode2 text.</li>
+<li>
 <a href="R/model.R">R/model.R</a> builds the <code>sbml_model</code>: one data frame per element kind, list columns for math and nested parts, accessors and printing.</li>
 <li>
 <a href="R/conditions.R">R/conditions.R</a> builds the classed conditions of design §8; their fields (<code>path</code>, <code>attribute</code>, <code>section</code>, <code>package</code>) are what tests assert on.</li>

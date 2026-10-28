@@ -115,6 +115,15 @@ semantics, validation). Built so far:
   dependency, and solves time 0 as one system of initial assignments,
   assignment rules and defaults. `derivs_function()` compiles the result
   into a `function(.t, .y, .p)`.
+- [R/events.R](https://pedrobtz.github.io/zusbml/R/events.R) derives
+  events and builds
+  [`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)’s
+  event engine: compiled root functions over each trigger’s relational
+  atoms, and a handler that applies section 4.12 (delays, persistence,
+  priorities, cascades). Its state lives in a closure and restarts at
+  time 0.
+- [R/rxode2.R](https://pedrobtz.github.io/zusbml/R/rxode2.R) prints
+  derived equations as rxode2 text.
 - [R/model.R](https://pedrobtz.github.io/zusbml/R/model.R) builds the
   `sbml_model`: one data frame per element kind, list columns for math
   and nested parts, accessors and printing.

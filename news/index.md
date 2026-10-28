@@ -23,15 +23,23 @@
   adds each function definition as a callable R function.
 
 - [`sbml_odes()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
-  derives the states, right-hand sides, assignments and constants of a
-  model without events, following the Level 3 Version 2 specification,
-  and
+  derives the states, right-hand sides, assignments, constants and
+  events of a model, following the Level 3 Version 2 specification, and
   [`sbml_initial_state()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
   gives the states at time 0. Algebraic rules, the `delay` csymbol and
   fast reactions are refused with `zusbml_unsupported`; assignment
-  cycles and missing values are `zusbml_derive_error`. All 964
-  event-free supported SBML Test Suite cases reproduce their reference
-  results.
+  cycles and missing values are `zusbml_derive_error`.
+
+- Events are derived and run:
+  [`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)
+  returns a derivative function for deSolve with the root function and
+  event handler that apply SBML’s event semantics (delays, persistence,
+  priorities, values from trigger time, events at time 0). All 1,384
+  supported SBML Test Suite cases reproduce their reference results.
+
+- [`sbml_to_rxode2()`](https://pedrobtz.github.io/zusbml/reference/sbml_to_rxode2.md)
+  writes the equations of a model as rxode2 model text; events are
+  refused, or left out with `events = "drop"`.
 
 - [`zusbml_info()`](https://pedrobtz.github.io/zusbml/reference/zusbml_info.md)
   reports what the package reads and writes.

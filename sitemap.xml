@@ -8,9 +8,11 @@
 <url><loc>https://pedrobtz.github.io/zusbml/news/index.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zusbml/reference/index.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zusbml/reference/sbml_components.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zusbml/reference/sbml_derivs.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zusbml/reference/sbml_math.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zusbml/reference/sbml_odes.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zusbml/reference/sbml_read.html</loc></url>
+<url><loc>https://pedrobtz.github.io/zusbml/reference/sbml_to_rxode2.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zusbml/reference/zusbml-package.html</loc></url>
 <url><loc>https://pedrobtz.github.io/zusbml/reference/zusbml_info.html</loc></url>
 </urlset>
