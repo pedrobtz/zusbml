@@ -103,6 +103,9 @@ jobs:
   biomodels:
     runs-on: ubuntu-latest
     env:
+      # rxode2 is in Enhances, which the R CMD check legs do not install, so
+      # the test that parses sbml_to_rxode2() output with it runs here.
+      ZUSBML_REQUIRE_RXODE2: "true"
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       ZUSBML_BIOMODELS: ${{ github.workspace }}/biomodels
       ZUSBML_REQUIRE_BIOMODELS: "true"
@@ -115,7 +118,7 @@ jobs:
 
       - uses: r-lib/actions/setup-r-dependencies@v2
         with:
-          extra-packages: any::pkgload, local::.
+          extra-packages: any::pkgload, any::rxode2, local::.
 
       - uses: actions/cache@v4
         with:
@@ -125,6 +128,6 @@ jobs:
       - name: Fetch the BioModels
         run: tools/fetch-biomodels.sh biomodels
 
-      - name: Run the BioModels test
-        run: testthat::test_local(filter = "biomodels", stop_on_failure = TRUE)
+      - name: Run the BioModels and rxode2 tests
+        run: testthat::test_local(filter = "biomodels|sbml-to-rxode2", stop_on_failure = TRUE)
         shell: Rscript {0}

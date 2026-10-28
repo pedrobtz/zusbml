@@ -30,14 +30,6 @@
       Error:
       ! SBML Level 3 package 'comp' not supported (at sbml). Use `ignore_packages = TRUE` to read the core model only.
 
-# a parse error names the element, attribute and section
-
-    Code
-      sbml_read(doc)
-    Condition
-      Error:
-      ! Missing required attribute at sbml/model/listOfParameters/parameter[1], attribute 'constant' (SBML L3V2 4.7).
-
 # an assignment cycle names its ids
 
     Code
@@ -53,4 +45,12 @@
     Condition
       Error:
       ! Algebraic rules make the model a DAE, which sbml_odes() does not derive.
+
+# a parse error names the element, attribute and section
+
+    Code
+      sbml_read(doc)
+    Condition
+      Error:
+      ! Missing required attribute at sbml/model/listOfParameters/parameter[1], attribute 'constant' (SBML L3V2 4.7).
 

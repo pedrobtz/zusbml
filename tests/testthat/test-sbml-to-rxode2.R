@@ -45,24 +45,39 @@ test_that("negation keeps its operand in parentheses", {
 })
 
 test_that("rxode2 parses the text for a set of event-free models", {
+  # rxode2 is in Enhances, which the R CMD check legs do not install; the
+  # biomodels CI job installs it and requires this test to run.
+  if (identical(Sys.getenv("ZUSBML_REQUIRE_RXODE2"), "true")) {
+    expect_true(requireNamespace("rxode2", quietly = TRUE))
+  }
   skip_if_not_installed("rxode2")
-  docs <- list(
-    test_path("fixtures", "suite", "00000", "00000-sbml-l3v2.xml"),
-    model_doc(
-      compartments = '<compartment id="C" size="2" constant="false"/>',
-      species = sp("A", conc = 3),
-      parameters = paste0(par("q", constant = FALSE), par("k", 2)),
-      rules = paste0(
-        rule("rate", "C", quote(sin(time))),
-        rule("assignment", "q", quote(if (A > 1) quotient(k, 3) else log(k, 2)))
+  cases <- list(
+    list(
+      doc = test_path("fixtures", "suite", "00000", "00000-sbml-l3v2.xml"),
+      states = c("S1", "S2")
+    ),
+    list(
+      doc = model_doc(
+        compartments = '<compartment id="C" size="2" constant="false"/>',
+        species = sp("A", conc = 3),
+        parameters = paste0(par("q", constant = FALSE), par("k", 2)),
+        rules = paste0(
+          rule("rate", "C", quote(sin(time))),
+          rule(
+            "assignment",
+            "q",
+            quote(if (A > 1) quotient(k, 3) else log(k, 2))
+          )
+        ),
+        reactions = rxn("r", quote(k * A), reactants = "A")
       ),
-      reactions = rxn("r", quote(k * A), reactants = "A")
+      states = c("C", ".amount.A")
     )
   )
 
-  for (doc in docs) {
-    text <- sbml_to_rxode2(sbml_read(doc))
+  for (case in cases) {
+    text <- sbml_to_rxode2(sbml_read(case$doc))
     vars <- rxode2::rxModelVars(text)
-    expect_true(length(vars$state) > 0)
+    expect_setequal(vars$state, case$states)
   }
 })

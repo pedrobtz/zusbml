@@ -360,3 +360,83 @@ test_that("the derived equations integrate to the analytic solution", {
 test_that("sbml_odes() refuses anything but a model", {
   expect_error(sbml_odes(list()), class = "zusbml_arg_error")
 })
+
+test_that("function definitions that call each other are a derive error", {
+  lambda <- function(f) {
+    paste0(
+      '<math xmlns="http://www.w3.org/1998/Math/MathML"><lambda><bvar><ci>x</ci></bvar>',
+      "<apply><ci>",
+      f,
+      "</ci><ci>x</ci></apply></lambda></math>"
+    )
+  }
+  m <- sbml_read(model_doc(
+    functions = paste0(
+      '<functionDefinition id="f">',
+      lambda("g"),
+      "</functionDefinition>",
+      '<functionDefinition id="g">',
+      lambda("f"),
+      "</functionDefinition>"
+    ),
+    parameters = par("p", constant = FALSE),
+    rules = paste0(
+      '<assignmentRule variable="p"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      "<apply><ci>f</ci><cn>1</cn></apply></math></assignmentRule>"
+    )
+  ))
+
+  err <- expect_error(sbml_odes(m), class = "zusbml_derive_error")
+  expect_setequal(err$ids, c("f", "g"))
+})
+
+test_that("calling a function with the wrong number of arguments is a derive error", {
+  m <- sbml_read(model_doc(
+    functions = paste0(
+      '<functionDefinition id="f">',
+      mml(quote(function(x) x)),
+      "</functionDefinition>"
+    ),
+    parameters = par("p", constant = FALSE),
+    rules = paste0(
+      '<assignmentRule variable="p"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      "<apply><ci>f</ci><cn>1</cn><cn>2</cn></apply></math></assignmentRule>"
+    )
+  ))
+
+  err <- expect_error(sbml_odes(m), class = "zusbml_derive_error")
+  expect_equal(err$ids, "f")
+})
+
+test_that("rateOf() of its own state is a derive error", {
+  m <- sbml_read(model_doc(
+    parameters = par("p", 0, constant = FALSE),
+    rules = rule("rate", "p", quote(rateOf(p) + 1))
+  ))
+
+  expect_error(sbml_odes(m), class = "zusbml_derive_error")
+})
+
+test_that("rateOf() of an expression or of an assigned symbol is refused", {
+  of_expression <- sbml_read(model_doc(
+    parameters = paste0(par("q", constant = FALSE), par("k", 1)),
+    rules = rule("assignment", "q", quote(rateOf(k * 2)))
+  ))
+  of_assigned <- sbml_read(model_doc(
+    parameters = paste0(
+      par("q", constant = FALSE),
+      par("a", constant = FALSE),
+      par("k", 1)
+    ),
+    rules = paste0(
+      rule("assignment", "a", quote(k * time)),
+      rule("assignment", "q", quote(rateOf(a)))
+    )
+  ))
+
+  err <- expect_error(sbml_odes(of_expression), class = "zusbml_unsupported")
+  expect_equal(err$construct, "rateOf")
+  expect_equal(err$section, "3.4.6")
+  err <- expect_error(sbml_odes(of_assigned), class = "zusbml_unsupported")
+  expect_equal(err$id, "a")
+})

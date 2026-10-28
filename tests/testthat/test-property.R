@@ -8,6 +8,8 @@ test_that("random reaction networks derive to their generator's equations", {
     f <- sbml_derivs(written)
 
     expect_identical(written, m, info = paste("network", i))
+    expect_setequal(names(attr(f, "y0")), net$species)
+    expect_equal(attr(f, "y0")[net$species], net$y0, info = paste("network", i))
     for (trial in 1:3) {
       y <- stats::setNames(
         stats::runif(length(net$species), 0.1, 2),

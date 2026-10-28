@@ -102,18 +102,11 @@ test_that("constraint messages and ids named time survive writing", {
 })
 
 test_that("math with no MathML equivalent is a write error", {
-  m <- sbml_read(model_doc(parameters = par("p", 1, constant = FALSE)))
-  m$rules <- data.frame(
-    type = "assignment",
-    variable = "p",
-    id = NA_character_,
-    name = NA_character_,
-    metaid = NA_character_,
-    sbo_term = NA_character_,
-    notes = NA_character_,
-    annotation = NA_character_
-  )
-  m$rules$math <- list(quote(trunc(2.5)))
+  m <- sbml_read(model_doc(
+    parameters = par("p", 1, constant = FALSE),
+    rules = rule("assignment", "p", 1)
+  ))
+  m$rules$math[[1]] <- quote(trunc(2.5))
 
   err <- expect_error(sbml_write(m), class = "zusbml_write_error")
   expect_equal(err$construct, "trunc")
