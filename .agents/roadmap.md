@@ -17,7 +17,7 @@ portfolio's.
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zusbml/issues/2) | [#15](https://github.com/pedrobtz/zusbml/pull/15) | 2026-10-28 |
-| 1 | [Oracle harness](#stage-1--oracle-harness) | full | [#3](https://github.com/pedrobtz/zusbml/issues/3) | | 2026-10-28 |
+| 1 | [Oracle harness](#stage-1--oracle-harness) | full | [#3](https://github.com/pedrobtz/zusbml/issues/3) | [#16](https://github.com/pedrobtz/zusbml/pull/16) | 2026-10-28 |
 | 2 | [Document reader and model object](#stage-2--document-reader-and-model-object) | quick | [#4](https://github.com/pedrobtz/zusbml/issues/4) | | |
 | 3 | [MathML](#stage-3--mathml) | quick | [#5](https://github.com/pedrobtz/zusbml/issues/5) | | |
 | 4 | [Derivation without events](#stage-4--derivation-without-events) | quick | [#6](https://github.com/pedrobtz/zusbml/issues/6) | | |
