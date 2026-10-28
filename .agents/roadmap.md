@@ -16,7 +16,7 @@ portfolio's.
 
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
-| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zusbml/issues/2) | | |
+| 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zusbml/issues/2) | [#15](https://github.com/pedrobtz/zusbml/pull/15) | 2026-10-28 |
 | 1 | [Oracle harness](#stage-1--oracle-harness) | full | [#3](https://github.com/pedrobtz/zusbml/issues/3) | | |
 | 2 | [Document reader and model object](#stage-2--document-reader-and-model-object) | quick | [#4](https://github.com/pedrobtz/zusbml/issues/4) | | |
 | 3 | [MathML](#stage-3--mathml) | quick | [#5](https://github.com/pedrobtz/zusbml/issues/5) | | |
@@ -65,10 +65,10 @@ portfolio's.
 **Issue.** [#3](https://github.com/pedrobtz/zusbml/issues/3), sub-issue of
 [v0.1.0](https://github.com/pedrobtz/zusbml/issues/1).
 
-**CI.** `full — first Suggests guards (deSolve, daffiz) in tests and the
-first package-local workflow: nosuggests and every platform leg.`
+**CI.** `full — first Suggests guard (deSolve) in tests and the first
+package-local workflow: nosuggests and every platform leg.`
 
-**Goal.** The three oracles run in CI before there is anything to judge, so
+**Goal.** The Test Suite oracle runs in CI before there is anything to judge, so
 every later stage reports a number against them.
 
 **Work.**
@@ -77,11 +77,11 @@ every later stage reports a number against them.
   (`semantic_tests_v3.5.0.zip`), checks its checksum and unpacks it into a
   directory listed in `.gitignore` and `.Rbuildignore` (D5).
 - Test helpers that parse a case's settings file and results CSV, and
-  compare trajectories under its `absolute` and `relative` tolerances
-  through `daffiz`.
+  compare trajectories under its `absolute` and `relative` tolerances,
+  in `tests/testthat/helper-suite.R` (D12).
 - A Test Suite runner test that skips when the suite is absent and is
-  required on the CI job that downloads it. Runner: `zupkode` when
-  installed, deSolve otherwise (Q3).
+  required on the CI job that downloads it. Runner: deSolve (D13).
+- A package-local Test Suite workflow (Q6).
 - The supported tag set (Q2) and the expected pass count per stage, in
   `tests/testthat/` or `.agents/`, so the count can only go up.
 
@@ -367,17 +367,10 @@ From design §2 and §14, in the order expected:
 
 - **Q1** (Stage 4): does `sbml_odes()` also return a compiled closure? The
   design returns expressions only.
-- **Q2** (Stage 1): the supported Test Suite tag set. The design proposes
-  everything except `AlgebraicRule`, `Delay`, `FastReaction` and the
-  package tags.
-- **Q3** (Stage 1): deSolve as the CI fallback runner, or wait for
-  `zupkode`. The design allows deSolve.
 - **Q4** (Stage 7): read Level 1 at all? The design says no.
 - **Q5** (Stage 10): CRAN submission or GitHub release; the board's
   `CRAN intent` decides, assumed `Planned`.
-- **Q6** (Stage 1): r-actions has no Test Suite workflow. Is it a
-  package-local workflow, or added to `pedrobtz/r-actions` first? This
-  roadmap assumes package-local.
-- **D2 and D6** (Stages 2 and 3): the design marks pure R on `zuxml` and
-  MathML as R language objects as the decisions most worth a second look.
-  Confirm before Stage 2 starts.
+
+Decided 2026-10-28, before Stage 0: Q2 as the design proposes; Q3 deSolve
+only (D13), with the comparison as a test helper instead of `daffiz` (D12);
+Q6 a package-local Test Suite workflow; D2 and D6 as the design has them.

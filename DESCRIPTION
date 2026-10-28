@@ -1,14 +1,21 @@
 Package: zusbml
-Title: What the Package Does (One Line, Title Case)
+Title: Read, Write and Derive Equations from 'SBML' Models
 Version: 0.0.0.9000
 Authors@R: 
-    person("First", "Last", , "first.last@example.com", role = c("aut", "cre"))
-Description: What the package does (one paragraph).
+    person("Pedro", "Baltazar", , "pedrobtz@gmail.com",
+           role = c("aut", "cre", "cph"))
+Description: Reads Systems Biology Markup Language ('SBML') core
+    documents, Level 3 Versions 1 and 2 and Level 2 Versions 4 and 5, into
+    one R object, writes that object back as Level 3 Version 2, and derives
+    from it the states, right-hand sides, assignments and events an
+    ordinary differential equation solver needs, following the
+    specification at <https://sbml.org/documents/specifications/>.
 License: MIT + file LICENSE
 Encoding: UTF-8
 Roxygen: list(markdown = TRUE)
-RoxygenNote: 8.1.0
 Suggests: 
     testthat (>= 3.0.0)
 Config/testthat/edition: 3
-URL: https://pedrobtz.github.io/zusbml/
+URL: https://pedrobtz.github.io/zusbml/, https://github.com/pedrobtz/zusbml
+BugReports: https://github.com/pedrobtz/zusbml/issues
+Config/roxygen2/version: 8.1.0
