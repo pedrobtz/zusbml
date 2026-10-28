@@ -600,6 +600,32 @@ sbml_counts <- function(x) {
   vapply(kinds, function(k) nrow(x[[k]]), integer(1))
 }
 
+# Every id the model declares, for writing math with the same context it
+# was read with (design D16).
+model_ids <- function(m) {
+  laws <- m$reactions$kinetic_law
+  ids <- c(
+    m$id,
+    m$functions$id,
+    m$unit_definitions$id,
+    m$compartments$id,
+    m$species$id,
+    m$parameters$id,
+    m$initial_assignments$id,
+    m$rules$id,
+    m$constraints$id,
+    m$reactions$id,
+    m$events$id,
+    unlist(lapply(
+      c(m$reactions$reactants, m$reactions$products, m$reactions$modifiers),
+      function(r) r$id
+    )),
+    unlist(lapply(laws, function(k) k$local_parameters$id)),
+    unlist(lapply(m$events$assignments, function(a) a$id))
+  )
+  unique(ids[!is.na(ids)])
+}
+
 check_model <- function(m) {
   if (!inherits(m, "sbml_model")) {
     stop(

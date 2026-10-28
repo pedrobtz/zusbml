@@ -391,6 +391,13 @@ decides it and the maintainer may overturn it.
   `&`; the `avogadro` csymbol becomes its number; `root` of degree n is
   `x^(1/n)`; a `piecewise` without `otherwise` gets `NaN`; units on `<cn>`
   (`sbml:units`) are not kept.
+- **D16 (M, 2026-10-28, Stage 4).** The `time` csymbol is the name `time` and
+  `<pi/>` the name `pi`, except in a document that declares an id `time` or
+  `pi` (Test Suite cases 01819 to 01821 do): there the csymbol is `.time` and
+  `<pi/>` the number pi. The reader collects the document's ids before
+  converting math, and the writer takes the model's ids, so both directions
+  agree. Derivation binds `.time` always and `time` unless the model defines
+  it. Internal names all start with "." because SBML ids cannot.
 - **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
   in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
   added after it is.

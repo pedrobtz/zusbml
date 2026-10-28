@@ -93,7 +93,22 @@ test_that("relations chain and logical operators take any arity", {
   )
   expect_identical(from_mathml("<apply><and/></apply>"), TRUE)
   expect_identical(from_mathml("<apply><or/></apply>"), FALSE)
-  expect_identical(from_mathml("<apply><or/><ci>a</ci></apply>"), quote(`|`(a)))
+  expect_identical(
+    from_mathml("<apply><or/><ci>a</ci></apply>"),
+    quote(a | FALSE)
+  )
+  expect_identical(
+    from_mathml("<apply><and/><ci>a</ci></apply>"),
+    quote(a & TRUE)
+  )
+  expect_identical(
+    from_mathml("<apply><xor/><ci>a</ci></apply>"),
+    quote(xor(a, FALSE))
+  )
+  expect_identical(
+    from_mathml("<apply><times/><ci>a</ci></apply>"),
+    quote(a * 1)
+  )
   expect_identical(
     from_mathml("<apply><xor/><ci>a</ci><ci>b</ci><ci>c</ci></apply>"),
     quote(xor(xor(a, b), c))

@@ -174,12 +174,33 @@ math_env <- local({
   env
 })
 
+# The ids of the document being read or written; see mathml_to_r().
+math_context <- new.env(parent = emptyenv())
+math_context$ids <- character(0)
+
+time_name <- function(ids = math_context$ids) {
+  if ("time" %in% ids) quote(.time) else quote(time)
+}
+
 # ---- MathML to R ---------------------------------------------------------
 
 # `node` is a <math> element; the result is an R expression (a call, a name,
 # a number or a logical), a `function` call for a lambda, or NULL for an
 # empty <math>.
-mathml_to_r <- function(node, path = "math", file = NA_character_) {
+#
+# `ids` are the ids the document declares. The time csymbol is the name
+# `time` and <pi/> the name `pi`, unless the document declares an id of that
+# name: then they are `.time` and the number pi, which no SBML id can shadow
+# (ids cannot contain "."). See design D16.
+mathml_to_r <- function(
+  node,
+  path = "math",
+  file = NA_character_,
+  ids = character(0)
+) {
+  old <- math_context$ids
+  math_context$ids <- ids
+  on.exit(math_context$ids <- old)
   kids <- zuxml::xml_elements(node)
   if (length(kids) == 0) {
     return(NULL)
@@ -208,7 +229,7 @@ mathml_node <- function(node, path, file) {
     true = TRUE,
     false = FALSE,
     notanumber = NaN,
-    pi = quote(pi),
+    pi = if ("pi" %in% math_context$ids) pi else quote(pi),
     infinity = Inf,
     exponentiale = quote(exp(1)),
     apply = mathml_apply(node, here, file),
@@ -288,7 +309,7 @@ mathml_csymbol <- function(node, path, file, applied) {
   if (kind %in% c("time", "avogadro") && applied) {
     math_error(paste0("csymbol ", kind, " cannot be applied"), path, file)
   }
-  switch(kind, time = quote(time), avogadro = avogadro, as.name(kind))
+  switch(kind, time = time_name(), avogadro = avogadro, as.name(kind))
 }
 
 mathml_apply <- function(node, path, file) {
@@ -406,10 +427,17 @@ apply_op <- function(op, args, path, file) {
         return(identity_value)
       }
       if (n == 1) {
-        if (op$mathml == "plus") {
-          return(call("+", args[[1]]))
-        }
-        return(as.call(c(as.name(fn), args)))
+        # R's operators are binary, so a lone argument is paired with the
+        # operator's identity: times(a) is a * 1, and(a) is a & TRUE.
+        return(switch(
+          op$mathml,
+          plus = call("+", args[[1]]),
+          times = call("*", args[[1]], 1),
+          and = call("&", args[[1]], TRUE),
+          or = call("|", args[[1]], FALSE),
+          xor = call("xor", args[[1]], FALSE),
+          as.call(c(as.name(fn), args))
+        ))
       }
       if (op$mathml %in% c("max", "min")) {
         return(as.call(c(as.name(fn), args)))
@@ -518,7 +546,10 @@ mathml_lambda <- function(node, path, file) {
 
 # The <math> element for an R expression, as text. A call outside the table
 # is a zusbml_write_error naming it (design section 8).
-r_to_mathml <- function(expr) {
+r_to_mathml <- function(expr, ids = character(0)) {
+  old <- math_context$ids
+  math_context$ids <- ids
+  on.exit(math_context$ids <- old)
   paste0('<math xmlns="', mathml_ns, '">', r_node(expr), "</math>")
 }
 
@@ -544,10 +575,10 @@ r_node <- function(expr) {
   }
   if (is.name(expr)) {
     name <- as.character(expr)
-    if (name == "pi") {
+    if (name == "pi" && !"pi" %in% math_context$ids) {
       return(tag("pi"))
     }
-    if (name == "time") {
+    if (identical(expr, time_name())) {
       return(paste0(
         '<csymbol encoding="text" definitionURL="',
         csymbol_url[["time"]],
