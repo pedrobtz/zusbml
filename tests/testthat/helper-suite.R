@@ -125,8 +125,8 @@ suite_has <- function(name) {
 }
 
 # One case through as much of the pipeline as exists: "pending" before the
-# reader, "read" (once its math survives R -> MathML -> R) before
-# derivation, then "pass" or "fail" for supported
+# reader, "read" (once its math survives R -> MathML -> R and the model
+# survives write and re-read) before derivation, then "pass" or "fail" for supported
 # cases and "refused" or "fail" for unsupported ones. Any condition that is
 # not a zusbml condition is "error".
 suite_run_case <- function(case) {
@@ -165,6 +165,16 @@ suite_run_case <- function(case) {
   drift <- suite_math_drift(model)
   if (length(drift) > 0) {
     return(result("fail", paste("MathML round trip changed:", drift[[1]])))
+  }
+  if (suite_has("sbml_write")) {
+    written <- getExportedValue("zusbml", "sbml_write")(model)
+    back <- tryCatch(sbml_read(written), error = function(cnd) cnd)
+    if (inherits(back, "condition")) {
+      return(result("fail", paste("written document:", conditionMessage(back))))
+    }
+    if (!identical(back, model)) {
+      return(result("fail", "read, write, read changed the model"))
+    }
   }
   if (!suite_has("sbml_odes")) {
     return(result(outcome))
