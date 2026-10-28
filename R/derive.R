@@ -89,7 +89,8 @@ sbml_odes <- function(m) {
     assignments = assignments,
     constants = unlist(values[constant_ids]) %||% numeric(0),
     initial = unlist(values[states$name]) %||% numeric(0),
-    species = species_info(m, symbols)
+    species = species_info(m, symbols),
+    events = derive_events(m, roles, rhs, assignments)
   )
 }
 
@@ -126,14 +127,6 @@ refuse_underivable <- function(m) {
       construct = "fast reaction",
       id = m$reactions$id[[fast[[1]]]],
       section = "4.11 (Level 3 Version 1)"
-    )
-  }
-  if (nrow(m$events) > 0) {
-    abort_unsupported(
-      "Events are not derived yet.",
-      construct = "event",
-      id = m$events$id[[1]],
-      section = "4.12"
     )
   }
   for (expr in model_math(m)) {
@@ -381,16 +374,18 @@ symbol_roles <- function(m, symbols) {
     kind <- symbols$kind[[i]]
     if (id %in% assigned) {
       add(id, id, kind, "assignment")
-    } else if (id %in% rated) {
-      add(id, id, kind, "state")
     } else if (
       kind == "species" && species_by_amount(id, sp, spatial, varying)
     ) {
       # A concentration in a compartment that changes size: the amount is
-      # what stays constant or is integrated (section 4.6.5).
+      # what stays constant or is integrated (section 4.6.5), so an event
+      # that resizes the compartment keeps it. A rate rule on the
+      # concentration is converted by the product rule in state_rhs().
       amount_role <- if (isTRUE(symbols$constant[[i]])) "constant" else "state"
       add(paste0(".amount.", id), id, kind, amount_role)
       add(id, id, kind, "assignment")
+    } else if (id %in% rated) {
+      add(id, id, kind, "state")
     } else if (isTRUE(symbols$constant[[i]])) {
       add(id, id, kind, "constant")
     } else {
@@ -444,7 +439,17 @@ state_rhs <- function(m, symbols, roles) {
     name <- states$name[[i]]
     symbol <- states$symbol[[i]]
     if (symbol %in% names(rate_of)) {
-      rhs[[name]] <- rate_of[[symbol]]
+      rule <- rate_of[[symbol]]
+      if (startsWith(name, ".amount.")) {
+        # d(S * C)/dt = dS/dt * C + S * dC/dt for a concentration S.
+        size <- as.name(sp$compartment[sp$id == symbol])
+        rule <- call(
+          "+",
+          call("*", rule, size),
+          call("*", as.name(symbol), call("rateOf", size))
+        )
+      }
+      rhs[[name]] <- rule
       next
     }
     if (states$kind[[i]] != "species") {

@@ -284,7 +284,7 @@ test_that("a reaction without a kinetic law is a derive error", {
   expect_equal(err$ids, "r")
 })
 
-test_that("algebraic rules, delay, fast reactions and events are refused", {
+test_that("algebraic rules, delay and fast reactions are refused", {
   algebraic <- model_doc(
     parameters = par("p", 1, constant = FALSE),
     rules = paste0("<algebraicRule>", mml(quote(p - 1)), "</algebraicRule>")
@@ -298,13 +298,6 @@ test_that("algebraic rules, delay, fast reactions and events are refused", {
     reactions = '<reaction id="r" reversible="false" fast="true"/>',
     version = 1
   )
-  event <- sbml_doc(paste0(
-    '<listOfEvents><event id="e" useValuesFromTriggerTime="true">',
-    '<trigger initialValue="true" persistent="true">',
-    mml(TRUE),
-    "</trigger>",
-    "</event></listOfEvents>"
-  ))
 
   err <- expect_error(
     sbml_odes(sbml_read(algebraic)),
@@ -315,8 +308,6 @@ test_that("algebraic rules, delay, fast reactions and events are refused", {
   expect_equal(err$construct, "delay")
   err <- expect_error(sbml_odes(sbml_read(fast)), class = "zusbml_unsupported")
   expect_equal(err$id, "r")
-  err <- expect_error(sbml_odes(sbml_read(event)), class = "zusbml_unsupported")
-  expect_equal(err$id, "e")
 })
 
 test_that("ids named time and pi do not clash with the csymbol and constant", {

@@ -105,6 +105,12 @@ validation). Built so far:
   and rate rules, orders assignments by dependency, and solves time 0 as
   one system of initial assignments, assignment rules and defaults.
   `derivs_function()` compiles the result into a `function(.t, .y, .p)`.
+- [R/events.R](R/events.R) derives events and builds `sbml_derivs()`'s
+  event engine: compiled root functions over each trigger's relational
+  atoms, and a handler that applies section 4.12 (delays, persistence,
+  priorities, cascades). Its state lives in a closure and restarts at
+  time 0.
+- [R/rxode2.R](R/rxode2.R) prints derived equations as rxode2 text.
 - [R/model.R](R/model.R) builds the `sbml_model`: one data frame per element
   kind, list columns for math and nested parts, accessors and printing.
 - [R/conditions.R](R/conditions.R) builds the classed conditions of design
