@@ -26,7 +26,7 @@ test_that("reactions read species references, modifiers and the kinetic law", {
   expect_equal(law$local_parameters$id, "k")
   expect_equal(law$local_parameters$value, 3)
   expect_equal(law$metaid, "kl")
-  expect_match(law$math, "<ci>k</ci>", fixed = TRUE)
+  expect_identical(law$math, quote(k))
 })
 
 test_that("a reaction without a kinetic law has NULL there", {

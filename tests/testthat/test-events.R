@@ -29,8 +29,10 @@ test_that("events read trigger, priority, delay and assignments", {
   expect_false(e$use_values_from_trigger_time)
   expect_true(e$trigger[[1]]$initial_value)
   expect_false(e$trigger[[1]]$persistent)
-  expect_match(e$priority[[1]]$math, "<cn>2</cn>", fixed = TRUE)
-  expect_match(e$delay[[1]]$math, "<cn>3</cn>", fixed = TRUE)
+  expect_identical(e$trigger[[1]]$math, 1)
+  expect_identical(e$priority[[1]]$math, 2)
+  expect_identical(e$delay[[1]]$math, 3)
+  expect_identical(e$assignments[[1]]$math[[1]], 4)
   expect_equal(e$assignments[[1]]$variable, "x")
 })
 

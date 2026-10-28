@@ -52,7 +52,8 @@ that are absent are \code{NA}. Math is a list column. Every table also has
 \code{modifiers}) as data frames and \code{kinetic_law} as a list with \code{math} and
 \code{local_parameters}. \code{sbml_events()} holds \code{trigger}, \code{priority}, \code{delay}
 and \code{assignments}. \code{sbml_rules()} has a \code{type} column: \code{"assignment"},
-\code{"rate"} or \code{"algebraic"}.
+\code{"rate"} or \code{"algebraic"}. \code{sbml_functions()} adds \code{fun}, each lambda
+as an R function; see \code{\link[=sbml_math]{sbml_math()}} for how math is represented.
 }
 \examples{
 m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))

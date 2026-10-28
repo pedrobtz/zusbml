@@ -18,7 +18,7 @@ test_that("rules read their type, variable and math", {
 
   expect_equal(rules$type, c("assignment", "rate", "algebraic"))
   expect_equal(rules$variable, c("a", "b", NA))
-  expect_true(all(vapply(rules$math, is.character, logical(1))))
+  expect_identical(rules$math, list(1, 1, 1))
 })
 
 test_that("an assignment rule needs a variable", {

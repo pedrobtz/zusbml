@@ -1,6 +1,7 @@
 # The sbml_model object (design section 4.3): one data frame per element
 # kind, scalar attributes as columns in snake_case, and list columns for math
-# and for nested parts (species references, kinetic laws, triggers). Every
+# and for nested parts (species references, kinetic laws, triggers). Math is
+# R language objects (design D6; see R/mathml.R). Every
 # element also keeps its SBase fields: metaid, sbo_term, and notes and
 # annotation as serialized XML text, so a re-read model is identical().
 
@@ -87,13 +88,19 @@ sbase_row <- function(el) {
   )
 }
 
+# An element's math as an R expression, or NULL when it has none.
+math_of <- function(el) {
+  wrapped <- el$children$math
+  if (is.null(wrapped)) NULL else wrapped[[1]]
+}
+
 # A nested single element (kineticLaw, trigger, priority, delay) as a list,
 # or NULL when absent.
 part <- function(el, ...) {
   if (is.null(el)) {
     return(NULL)
   }
-  c(list(...), list(math = el$children$math), sbase_row(el))
+  c(list(...), list(math = math_of(el)), sbase_row(el))
 }
 
 function_table <- function(items) {
@@ -102,7 +109,7 @@ function_table <- function(items) {
       list(
         id = el$attributes$id,
         name = el$attributes$name,
-        math = el$children$math
+        math = math_of(el)
       ),
       sbase_row(el)
     )
@@ -261,7 +268,7 @@ initial_assignment_table <- function(items) {
         symbol = a$symbol,
         id = a$id,
         name = a$name,
-        math = el$children$math
+        math = math_of(el)
       ),
       sbase_row(el)
     )
@@ -289,7 +296,7 @@ rule_table <- function(items) {
         variable = a$variable %||% NA_character_,
         id = a$id,
         name = a$name,
-        math = el$children$math
+        math = math_of(el)
       ),
       sbase_row(el)
     )
@@ -316,7 +323,7 @@ constraint_table <- function(items) {
       list(
         id = a$id,
         name = a$name,
-        math = el$children$math,
+        math = math_of(el),
         message = el$children$message %||% NA_character_
       ),
       sbase_row(el)
@@ -451,7 +458,7 @@ event_table <- function(items) {
           variable = ea$attributes$variable,
           id = ea$attributes$id,
           name = ea$attributes$name,
-          math = ea$children$math
+          math = math_of(ea)
         ),
         sbase_row(ea)
       )
@@ -614,7 +621,8 @@ check_model <- function(m) {
 #' `modifiers`) as data frames and `kinetic_law` as a list with `math` and
 #' `local_parameters`. `sbml_events()` holds `trigger`, `priority`, `delay`
 #' and `assignments`. `sbml_rules()` has a `type` column: `"assignment"`,
-#' `"rate"` or `"algebraic"`.
+#' `"rate"` or `"algebraic"`. `sbml_functions()` adds `fun`, each lambda
+#' as an R function; see [sbml_math()] for how math is represented.
 #'
 #' @param m An `sbml_model`.
 #' @return A data frame.
@@ -671,7 +679,13 @@ sbml_events <- function(m) {
 #' @export
 sbml_functions <- function(m) {
   check_model(m)
-  m$functions
+  out <- m$functions
+  out$fun <- lapply(out$math, function(lambda) {
+    if (is.call(lambda) && identical(lambda[[1]], as.name("function"))) {
+      eval(lambda, math_env)
+    }
+  })
+  out
 }
 
 #' @rdname sbml_components
