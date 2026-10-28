@@ -45,6 +45,7 @@ sbml_read <- function(x, ignore_packages = FALSE) {
   ctx$file <- input$file
   ctx$ignore_packages <- ignore_packages
   ctx$ignored <- character(0)
+  ctx$dropped <- character(0)
 
   root <- zuxml::xml_root(doc)
   read_level(root, ctx)
@@ -70,6 +71,14 @@ document_ids <- function(doc) {
     zuxml::xml_attr(zuxml::xml_find(doc), "id", ns = NA)
   )
   unique(ids[!is.na(ids)])
+}
+
+# What an element holds, as XML text: notes, annotation and a constraint's
+# message are kept without their own tag, whose namespace is the source
+# document's, and the writer wraps them in the tag of the document it
+# writes (design D14). Each child carries the namespaces it uses.
+xml_content <- function(node) {
+  paste(zuxml::xml_serialize(zuxml::xml_children(node)), collapse = "")
 }
 
 read_input <- function(x) {
@@ -111,13 +120,22 @@ read_level <- function(root, ctx) {
       file = ctx$file
     )
   }
+  readable_l2 <- sbml_ns_other[c("2.4", "2.5")]
+  if (ns %in% readable_l2) {
+    level <- names(readable_l2)[match(ns, readable_l2)]
+    ctx$ns <- ns
+    ctx$level <- 2L
+    ctx$version <- as.integer(sub("^2\\.", "", level))
+    return(invisible())
+  }
   if (ns %in% sbml_ns_other) {
     level <- names(sbml_ns_other)[match(ns, sbml_ns_other)]
     abort_unsupported(
       paste0(
         "SBML Level ",
-        sub("\\..*$", "", level),
-        " documents are not supported; zusbml reads Level 3."
+        sub("\\.", " Version ", level),
+        " documents are not supported; zusbml reads Level 3 and Level 2 ",
+        "Versions 4 and 5."
       ),
       construct = paste0("SBML Level ", level)
     )
@@ -196,7 +214,7 @@ package_from_ns <- function(ns) {
 # <message>, a list for listOf containers, and a parsed
 # element for single children such as <kineticLaw>.
 read_element <- function(node, kind, path, ctx) {
-  spec <- element_spec(kind, ctx$version)
+  spec <- element_spec(kind, ctx$version, ctx$level)
   attributes <- read_attributes(node, spec, path, ctx)
 
   out <- list(
@@ -230,7 +248,7 @@ read_element <- function(node, kind, path, ctx) {
       next
     }
     if (local %in% c("notes", "annotation")) {
-      out[[local]] <- zuxml::xml_serialize(kids[[i]])
+      out[[local]] <- xml_content(kids[[i]])
       next
     }
     if (local == "math" && !identical(ns, mathml_ns)) {
@@ -267,16 +285,16 @@ read_child <- function(node, local, path, ctx) {
     return(list(mathml_to_r(node, path, ctx$file, ctx$ids)))
   }
   if (local == "message") {
-    return(zuxml::xml_serialize(node))
+    return(xml_content(node))
   }
-  if (local %in% names(sbml_lists)) {
+  if (local %in% c(names(sbml_lists), names(level2_lists))) {
     return(read_list(node, local, path, ctx))
   }
   read_element(node, local, path, ctx)
 }
 
 read_list <- function(node, list_kind, path, ctx) {
-  allowed <- sbml_lists[[list_kind]]
+  allowed <- sbml_lists[[list_kind]] %||% level2_lists[[list_kind]]
   read_attributes(
     node,
     list(attributes = sbase_attributes, section = "3.1"),
@@ -323,6 +341,9 @@ read_attributes <- function(node, spec, path, ctx) {
     note_packages(packages, path, ctx)
   }
   raw <- raw[!prefixed]
+  if (ctx$level == 2L) {
+    ctx$dropped <- union(ctx$dropped, intersect(names(raw), level2_dropped))
+  }
 
   unknown <- setdiff(names(raw), names(spec$attributes))
   if (length(unknown) > 0) {
@@ -350,7 +371,8 @@ read_attributes <- function(node, spec, path, ctx) {
           file = ctx$file
         )
       }
-      values[[name]] <- na_of(type)
+      default <- spec$attributes[[name]][3][[1]]
+      values[[name]] <- default %||% na_of(type)
       next
     }
     values[[name]] <- parse_value(value, type, path, name, spec$section, ctx)

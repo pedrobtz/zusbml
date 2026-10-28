@@ -188,7 +188,7 @@ test_that("suite_run_case() reports a package document as refused", {
 test_that("suite_run() returns one row per case with a status", {
   report <- suite_run(fixture_suite())
 
-  expect_named(report, c("id", "category", "status", "message"))
+  expect_named(report, c("id", "category", "status", "message", "level2"))
   expect_equal(report$id, "00000")
   expect_true(report$status %in% c("pass", "read"))
 })
@@ -196,7 +196,7 @@ test_that("suite_run() returns one row per case with a status", {
 test_that("suite_floor() reads the committed floors as integers", {
   floor <- suite_floor()
 
-  expect_named(floor, c("stage", "read", "pass", "refused"))
+  expect_named(floor, c("stage", "read", "pass", "refused", "level2"))
   expect_true(all(vapply(floor, is.integer, logical(1))))
 })
 

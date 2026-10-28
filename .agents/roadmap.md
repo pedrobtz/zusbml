@@ -23,7 +23,7 @@ portfolio's.
 | 4 | [Derivation without events](#stage-4--derivation-without-events) | quick | [#6](https://github.com/pedrobtz/zusbml/issues/6) | [#19](https://github.com/pedrobtz/zusbml/pull/19) | 2026-10-28 |
 | 5 | [Events and solver interfaces](#stage-5--events-and-solver-interfaces) | quick | [#7](https://github.com/pedrobtz/zusbml/issues/7) | [#20](https://github.com/pedrobtz/zusbml/pull/20) | 2026-10-28 |
 | 6 | [Writer and structural checks](#stage-6--writer-and-structural-checks) | quick | [#8](https://github.com/pedrobtz/zusbml/issues/8) | [#21](https://github.com/pedrobtz/zusbml/pull/21) | 2026-10-28 |
-| 7 | [Level 2, BioModels and property test](#stage-7--level-2-biomodels-and-property-test) | quick | [#9](https://github.com/pedrobtz/zusbml/issues/9) | | |
+| 7 | [Level 2, BioModels and property test](#stage-7--level-2-biomodels-and-property-test) | quick | [#9](https://github.com/pedrobtz/zusbml/issues/9) | | 2026-10-28 |
 | 8 | [Documentation](#stage-8--documentation) | quick | [#10](https://github.com/pedrobtz/zusbml/issues/10) | | |
 | 9 | [Full CI](#stage-9--full-ci) | full | [#11](https://github.com/pedrobtz/zusbml/issues/11) | | |
 | 10 | [v0.1.0 readiness](#stage-10--v010-readiness) | full | [#12](https://github.com/pedrobtz/zusbml/issues/12) | | |
@@ -289,6 +289,13 @@ and generated ones.
 - All fifty BioModels identifiers read and round-trip in CI.
 - The property test runs in CI.
 - `R CMD check` passes on the quick r-actions profile.
+
+**Deviations, 2026-10-28.** The fifty BioModels are the first that read,
+round-trip and derive among the first 400 curated models in Level 3 or Level
+2 Version 4 (2 and 48; `tools/biomodels.txt`): 181 of those 400 are Level 2
+Versions 1 to 3, out of scope (D18). `zufuzz` is not on CRAN or usable yet,
+so no fuzz targets. The §10 targets are measured and recorded in the design;
+only the Test Suite one is met.
 
 **Design.** §6.4, §7, §9, §10, §15 Q4.
 

@@ -49,7 +49,7 @@ test_that("accessors refuse anything but a model", {
 test_that("zusbml_info() states what is read and written", {
   info <- zusbml_info()
 
-  expect_equal(info$read, c("3.1", "3.2"))
+  expect_equal(info$read, c("2.4", "2.5", "3.1", "3.2"))
   expect_equal(info$write, "3.2")
   expect_identical(info$packages, character(0))
 })
