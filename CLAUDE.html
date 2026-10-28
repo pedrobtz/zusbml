@@ -86,9 +86,12 @@
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">tools/fetch-test-suite.sh</span>                        <span class="co"># into sbml-test-suite/</span></span>
 <span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="va">ZUSBML_TEST_SUITE</span><span class="op">=</span><span class="va">$PWD</span>/sbml-test-suite <span class="va">ZUSBML_SUITE_CORES</span><span class="op">=</span>4 <span class="dt">\</span></span>
 <span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "^suite$")'</span></span>
-<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="ex">tools/fetch-biomodels.sh</span>                         <span class="co"># the 50 fixed models</span></span>
-<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="va">ZUSBML_BIOMODELS</span><span class="op">=</span><span class="va">$PWD</span>/biomodels <span class="dt">\</span></span>
-<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "biomodels")'</span></span></code></pre></div>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="co"># ZUSBML_SUITE_SHARD=1/2 runs half the cases, as each CI shard does;</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="co"># ZUSBML_SUITE_SKIP=00966 leaves out the one case that takes minutes, as</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a><span class="co"># quick pull request runs do (main and full-ci runs keep it)</span></span>
+<span id="cb2-7"><a href="#cb2-7" tabindex="-1"></a><span class="ex">tools/fetch-biomodels.sh</span>                         <span class="co"># the 50 fixed models</span></span>
+<span id="cb2-8"><a href="#cb2-8" tabindex="-1"></a><span class="va">ZUSBML_BIOMODELS</span><span class="op">=</span><span class="va">$PWD</span>/biomodels <span class="dt">\</span></span>
+<span id="cb2-9"><a href="#cb2-9" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "biomodels")'</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a></h2>
