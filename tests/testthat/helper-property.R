@@ -77,5 +77,7 @@ random_network <- function() {
     change[!by_amount] <- change[!by_amount] / size
     change
   }
-  list(doc = doc, species = species, rhs = rhs)
+  # The initial value of each species' symbol.
+  y0 <- stats::setNames(ifelse(by_amount, initial, initial / size), species)
+  list(doc = doc, species = species, rhs = rhs, y0 = y0)
 }
