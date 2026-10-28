@@ -80,6 +80,14 @@ Rscript -e 'devtools::check()'                   # R CMD check
 air format .                                     # format R sources
 ```
 
+The SBML Test Suite oracle, occasional (CI runs it on every push):
+
+``` sh
+tools/fetch-test-suite.sh                        # into sbml-test-suite/
+ZUSBML_TEST_SUITE=$PWD/sbml-test-suite \
+  Rscript -e 'devtools::test(filter = "^suite$")'
+```
+
 ## Architecture
 
 To be written as stages land; see `.agents/design.md` §4 for the planned
@@ -132,7 +140,11 @@ These are fixed by the design before any code exists.
   SBML Test Suite 3.5.0 semantic cases, which also judge the writer by
   round trip, and fifty BioModels identifiers (design §7). None of them
   covers SBML packages, algebraic rules or `delay`, which are refused.
-- **Helpers live in `tests/testthat/helper-*.R`.** None yet.
+- **Helpers live in `tests/testthat/helper-*.R`.** `helper-suite.R`
+  reads Test Suite cases, applies their tolerance rule
+  (`suite_compare()`) and runs each case through as much of the pipeline
+  as exists (`suite_run_case()`); `suite-floor.dcf` holds the counts
+  that may only go up.
 - **Keep the suite inside the CRAN time budget.** No tests yet.
 
 ## Definition of done
@@ -189,7 +201,8 @@ instead of writing bespoke ones, and pin a released tag rather than
 to a commit, with the tag in a comment. The `R-CMD-check` workflow must
 call `r-cmd-check.yml`, because a hand-rolled one does not count as the
 pre-submission check. This package calls `r-cmd-check.yml@v1` and
-`coverage.yml@v1`; `pkgdown.yaml` is local.
+`coverage.yml` (pinned to a commit); `pkgdown.yaml` and
+`test-suite.yaml`, the Test Suite oracle, are local.
 
 Small edits get a small run. The shared workflows look at the files a
 pull request changes, compared with its merge base:
