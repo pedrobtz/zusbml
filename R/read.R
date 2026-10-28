@@ -419,6 +419,15 @@ na_of <- function(type) {
 parse_value <- function(value, type, path, name, section, ctx) {
   value <- unname(value)
   trimmed <- trimws(value)
+  if (type == "string" && name %in% sid_attributes && !is_sid(value)) {
+    abort_parse(
+      paste0("'", value, "' is not a valid SBML identifier"),
+      path = path,
+      attribute = name,
+      section = "3.1.7",
+      file = ctx$file
+    )
+  }
   parsed <- switch(
     type,
     string = value,
@@ -448,6 +457,30 @@ parse_value <- function(value, type, path, name, section, ctx) {
   }
   parsed
 }
+
+# Attributes whose value is an SId or UnitSId, and SBML's syntax for them
+# (section 3.1.7). Derivation relies on it: internal names start with ".",
+# which no SId can (design D16).
+sid_attributes <- c(
+  "id",
+  "variable",
+  "symbol",
+  "species",
+  "compartment",
+  "conversionFactor",
+  "units",
+  "substanceUnits",
+  "timeUnits",
+  "volumeUnits",
+  "areaUnits",
+  "lengthUnits",
+  "extentUnits",
+  "outside",
+  "compartmentType",
+  "speciesType"
+)
+
+is_sid <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*$", x)
 
 # XML Schema doubles: decimal or scientific notation, INF, -INF and NaN.
 parse_double <- function(x) {
