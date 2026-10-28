@@ -29,4 +29,12 @@
 * `sbml_to_rxode2()` writes the equations of a model as rxode2 model text;
   events are refused, or left out with `events = "drop"`.
 
+* `sbml_write()` writes a model as SBML Level 3 Version 2; reading it back
+  gives an identical model for every readable SBML Test Suite case.
+  `sbml_write_json()` writes the model object as JSON with zujson.
+
+* `sbml_check()` reports structural problems (duplicate ids, unresolved
+  references, symbols set twice, rules or events on constants, assignment
+  cycles) as a data frame.
+
 * `zusbml_info()` reports what the package reads and writes.

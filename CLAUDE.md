@@ -111,6 +111,11 @@ validation). Built so far:
   priorities, cascades). Its state lives in a closure and restarts at
   time 0.
 - [R/rxode2.R](R/rxode2.R) prints derived equations as rxode2 text.
+- [R/write.R](R/write.R) writes Level 3 Version 2 as text (`zuxml` cannot
+  build nodes); the Test Suite runner requires read, write, read to give an
+  identical model. `sbml_write_json()` goes through `zujson`.
+- [R/check.R](R/check.R) is `sbml_check()`: structural findings as a data
+  frame, never an error.
 - [R/model.R](R/model.R) builds the `sbml_model`: one data frame per element
   kind, list columns for math and nested parts, accessors and printing.
 - [R/conditions.R](R/conditions.R) builds the classed conditions of design

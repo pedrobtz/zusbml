@@ -19,7 +19,8 @@ Suggests:
     deSolve,
     parallel,
     testthat (>= 3.0.0),
-    withr
+    withr,
+    zujson
 Enhances: 
     rxode2
 Config/testthat/edition: 3
