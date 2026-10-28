@@ -371,13 +371,13 @@ decides it and the maintainer may overturn it.
 - **D12 (M, 2026-10-28).** The Test Suite comparison is a test helper,
   not `daffiz`, which is not on CRAN and would need
   `Additional_repositories` in `Suggests`.
-- **D14 (M, 2026-10-28, Stage 2).** `notes`, `annotation` and a
-  constraint's `message` are kept as serialized XML text, not `zuxml`
-  nodes: nodes hold external pointers, so a re-read model would never be
-  `identical()` and the §2 round trip could not be tested. Math is R
-  expressions (D6) from Stage 3 on. `notes` and `annotation` on `listOf*`
-  containers are dropped. `zuxml` 0.1.0 parses and serializes but cannot build nodes, so
-  `sbml_write()` emits XML text itself.
+- **D14 (M, 2026-10-28, Stage 2).** `notes`, `annotation` and a constraint's
+  `message` are kept as serialized XML text, not `zuxml` nodes: nodes hold
+  external pointers, so a re-read model would never be `identical()` and the
+  §2 round trip could not be tested. Math is R expressions (D6) from Stage 3
+  on. `notes` and `annotation` on `listOf*` containers are dropped. `zuxml`
+  0.1.0 parses and serializes but cannot build nodes, so `sbml_write()` emits
+  XML text itself.
 - **D15 (M, 2026-10-28, Stage 3).** MathML operators with an exact base
   R equivalent become that call; the rest keep their SBML name as an R
   call: `quotient()`, `rem()`, `implies()`, `rateOf()`, `delay()`, and the
