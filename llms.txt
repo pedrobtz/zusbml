@@ -5,13 +5,12 @@
 [SBML](https://sbml.org), the Systems Biology Markup Language, is how
 models of biochemical networks, pharmacokinetics and cell signaling are
 shared: hundreds of them are curated in
-[BioModels](https://www.ebi.ac.uk/biomodels/). But an SBML file
-describes reactions between species in compartments, and a solver wants
-`dX/dt` for each state. The translation, with amounts against
-concentrations, compartments that change size, conversion factors and
-events, is where hand-written versions go wrong. The R packages that
-read SBML either need the libSBML system library or are no longer
-maintained.
+[BioModels](https://www.biomodels.org/). But an SBML file describes
+reactions between species in compartments, and a solver wants `dX/dt`
+for each state. The translation, with amounts against concentrations,
+compartments that change size, conversion factors and events, is where
+hand-written versions go wrong. The R packages that read SBML either
+need the libSBML system library or are no longer maintained.
 
 zusbml reads an SBML document into one R object, writes it back as SBML,
 and derives from it the equations a solver needs, with nothing but R
@@ -39,7 +38,14 @@ installed.
 
 ## Installation
 
-zusbml is not on CRAN yet. Install the development version from GitHub:
+Once zusbml is on CRAN, install it with:
+
+``` r
+
+install.packages("zusbml")
+```
+
+The development version is on GitHub:
 
 ``` r
 

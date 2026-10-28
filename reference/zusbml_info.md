@@ -23,7 +23,7 @@ they are refused or, on request, ignored).
 ``` r
 zusbml_info()
 #> $version
-#> [1] "0.0.0.9000"
+#> [1] "0.1.0"
 #> 
 #> $read
 #> [1] "2.4" "2.5" "3.1" "3.2"
