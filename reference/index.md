@@ -13,6 +13,8 @@
   [`sbml_constraints()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   [`sbml_unit_definitions()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   : Model components
+- [`sbml_math()`](https://pedrobtz.github.io/zusbml/reference/sbml_math.md)
+  : Show model math as R code
 - [`sbml_read()`](https://pedrobtz.github.io/zusbml/reference/sbml_read.md)
   : Read an SBML document
 - [`zusbml_info()`](https://pedrobtz.github.io/zusbml/reference/zusbml_info.md)

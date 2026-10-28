@@ -90,6 +90,8 @@
 <li>
 <a href="R/read.R">R/read.R</a> parses with <code>zuxml</code>, settles level and version from the namespace, refuses or drops SBML packages, and turns each element into a list of typed attributes, SBase fields and children.</li>
 <li>
+<a href="R/mathml.R">R/mathml.R</a> turns MathML into R expressions and back. One table (<code>math_ops</code>) drives both directions; <code>math_env</code> defines the operators kept under their SBML names (design D15). The Test Suite runner checks that every expression survives R -&gt; MathML -&gt; R unchanged.</li>
+<li>
 <a href="R/model.R">R/model.R</a> builds the <code>sbml_model</code>: one data frame per element kind, list columns for math and nested parts, accessors and printing.</li>
 <li>
 <a href="R/conditions.R">R/conditions.R</a> builds the classed conditions of design §8; their fields (<code>path</code>, <code>attribute</code>, <code>section</code>, <code>package</code>) are what tests assert on.</li>

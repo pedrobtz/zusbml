@@ -102,6 +102,11 @@ semantics, validation). Built so far:
   `zuxml`, settles level and version from the namespace, refuses or
   drops SBML packages, and turns each element into a list of typed
   attributes, SBase fields and children.
+- [R/mathml.R](https://pedrobtz.github.io/zusbml/R/mathml.R) turns
+  MathML into R expressions and back. One table (`math_ops`) drives both
+  directions; `math_env` defines the operators kept under their SBML
+  names (design D15). The Test Suite runner checks that every expression
+  survives R -\> MathML -\> R unchanged.
 - [R/model.R](https://pedrobtz.github.io/zusbml/R/model.R) builds the
   `sbml_model`: one data frame per element kind, list columns for math
   and nested parts, accessors and printing.

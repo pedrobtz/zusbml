@@ -35,6 +35,7 @@
     <div class="section level2">
 <h2 class="pkg-version" data-toc-text="0.0.0.9000" id="zusbml-0009000">zusbml 0.0.0.9000<a class="anchor" aria-label="anchor" href="#zusbml-0009000"></a></h2>
 <ul><li><p><code><a href="../reference/sbml_read.html">sbml_read()</a></code> reads SBML Level 3 Version 1 and 2 core documents from a file, a URL, XML text or a raw vector into an <code>sbml_model</code>, with one data frame per element kind (<code><a href="../reference/sbml_components.html">sbml_species()</a></code>, <code><a href="../reference/sbml_components.html">sbml_reactions()</a></code>, …). Malformed documents raise <code>zusbml_parse_error</code> naming the element path and attribute; SBML packages and other levels raise <code>zusbml_unsupported</code>, and <code>ignore_packages = TRUE</code> reads the core of a package document.</p></li>
+<li><p>Model math is R language objects: <code>&lt;apply&gt;&lt;power/&gt;</code> is <code>^</code>, <code>&lt;piecewise&gt;</code> is nested <code>if</code>, lambdas are <code>function</code> expressions, and operators without a base R equivalent keep their SBML names (<code>quotient()</code>, <code>rateOf()</code>, …). <code><a href="../reference/sbml_math.html">sbml_math()</a></code> shows math as R code, and <code><a href="../reference/sbml_components.html">sbml_functions()</a></code> adds each function definition as a callable R function.</p></li>
 <li><p><code><a href="../reference/zusbml_info.html">zusbml_info()</a></code> reports what the package reads and writes.</p></li>
 </ul></div>
   </main></div>

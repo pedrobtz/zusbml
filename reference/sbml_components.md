@@ -46,7 +46,10 @@ A data frame.
 `products`, `modifiers`) as data frames and `kinetic_law` as a list with
 `math` and `local_parameters`. `sbml_events()` holds `trigger`,
 `priority`, `delay` and `assignments`. `sbml_rules()` has a `type`
-column: `"assignment"`, `"rate"` or `"algebraic"`.
+column: `"assignment"`, `"rate"` or `"algebraic"`. `sbml_functions()`
+adds `fun`, each lambda as an R function; see
+[`sbml_math()`](https://pedrobtz.github.io/zusbml/reference/sbml_math.md)
+for how math is represented.
 
 ## Examples
 
