@@ -12,7 +12,7 @@ same time.
 ## Usage
 
 ``` r
-sbml_derivs(m, outputs = character(0))
+sbml_derivs(m, outputs = character(0), parms = NULL)
 ```
 
 ## Arguments
@@ -26,6 +26,11 @@ sbml_derivs(m, outputs = character(0))
   Model symbols to report as extra columns of the solver output, such as
   species defined by assignment rules or reaction rates.
 
+- parms:
+
+  A named numeric vector of constants to use instead of the model's
+  values, or `NULL`.
+
 ## Value
 
 A function with attributes `y0`, `parms`, and for models with events
@@ -36,6 +41,11 @@ A function with attributes `y0`, `parms`, and for models with events
 The function keeps the event queue between calls. Use it for one
 integration starting at time 0; calling it again at time 0 restarts the
 queue.
+
+To change constants, pass them in `parms` here rather than editing the
+`parms` attribute: initial assignments and events at time 0 that depend
+on them are then reflected in `y0`. The function and its events always
+use the `parms` the solver passes.
 
 ## Examples
 
