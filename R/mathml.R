@@ -295,7 +295,7 @@ mathml_node <- function(node, path, file) {
   switch(
     local,
     cn = mathml_cn(node, here, file),
-    ci = as.name(trimws(zuxml::xml_text(node))),
+    ci = as.name(ci_name(node, here, file)),
     csymbol = mathml_csymbol(node, here, file, applied = FALSE),
     true = TRUE,
     false = FALSE,
@@ -319,6 +319,20 @@ mathml_node <- function(node, path, file) {
       file
     )
   )
+}
+
+# The name a <ci> holds, which must be an SId (section 3.1.7): derivation
+# relies on names never starting with "." (design D16).
+ci_name <- function(node, path, file) {
+  name <- trimws(zuxml::xml_text(node))
+  if (!is_sid(name)) {
+    math_error(
+      paste0("<ci> name '", name, "' is not a valid SBML identifier"),
+      path,
+      file
+    )
+  }
+  name
 }
 
 mathml_cn <- function(node, path, file) {
@@ -409,7 +423,7 @@ mathml_apply <- function(node, path, file) {
   }
 
   if (head_name == "ci") {
-    name <- trimws(zuxml::xml_text(head))
+    name <- ci_name(head, path, file)
     if (!name %in% math_context$functions) {
       math_error(
         paste0(
@@ -612,7 +626,7 @@ mathml_lambda <- function(node, path, file) {
       if (length(ci) != 1 || zuxml::xml_local(ci) != "ci") {
         math_error("<bvar> holds one <ci>", path, file)
       }
-      trimws(zuxml::xml_text(ci))
+      ci_name(ci, path, file)
     },
     character(1)
   )
