@@ -22,5 +22,16 @@
   [`sbml_functions()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   adds each function definition as a callable R function.
 
+- [`sbml_odes()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
+  derives the states, right-hand sides, assignments and constants of a
+  model without events, following the Level 3 Version 2 specification,
+  and
+  [`sbml_initial_state()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
+  gives the states at time 0. Algebraic rules, the `delay` csymbol and
+  fast reactions are refused with `zusbml_unsupported`; assignment
+  cycles and missing values are `zusbml_derive_error`. All 964
+  event-free supported SBML Test Suite cases reproduce their reference
+  results.
+
 - [`zusbml_info()`](https://pedrobtz.github.io/zusbml/reference/zusbml_info.md)
   reports what the package reads and writes.

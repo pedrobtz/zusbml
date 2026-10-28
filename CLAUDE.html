@@ -65,7 +65,7 @@
 <div class="section level2">
 <h2 id="versioning">Versioning<a class="anchor" aria-label="anchor" href="#versioning"></a></h2>
 <p>A new package develops at <code>0.0.0.9000</code> and targets <code>0.1.0</code> for its first CRAN release. Set <code>Version: 0.1.0</code> and the matching <code>NEWS.md</code> heading when the package enters <code>Pre-flight</code>. Bump to <code>0.1.0.9000</code> only after CRAN accepts it, never before: a <code>.9000</code> version above an unreleased <code>0.1.0</code> heading is wrong.</p>
-<p>Until the first release the R API may change freely. Sibling packages can still depend on this one before CRAN does, through <code>Remotes:</code> or <code>LinkingTo:</code>. <code>zupkpmx</code> (RFC 0046) will take its SBML models from here for PEtab (zupkpmx#17), so the shape of <code>sbml_odes()</code> output is effectively an API once that work starts. A package that others wait on should reach CRAN first.</p>
+<p>Until the first release the R API may change freely. Sibling packages can still depend on this one before CRAN does, through <code>Remotes:</code> or <code>LinkingTo:</code>. <code>zupkpmx</code> (RFC 0046) will take its SBML models from here for PEtab (zupkpmx#17), so the shape of <code><a href="reference/sbml_odes.html">sbml_odes()</a></code> output is effectively an API once that work starts. A package that others wait on should reach CRAN first.</p>
 </div>
 <div class="section level2">
 <h2 id="commands">Commands<a class="anchor" aria-label="anchor" href="#commands"></a></h2>
@@ -92,6 +92,8 @@
 <li>
 <a href="R/mathml.R">R/mathml.R</a> turns MathML into R expressions and back. One table (<code>math_ops</code>) drives both directions; <code>math_env</code> defines the operators kept under their SBML names (design D15). The Test Suite runner checks that every expression survives R -&gt; MathML -&gt; R unchanged.</li>
 <li>
+<a href="R/derive.R">R/derive.R</a> is <code><a href="reference/sbml_odes.html">sbml_odes()</a></code>: it gives every symbol one role (constant, assignment or state), builds right-hand sides from reactions and rate rules, orders assignments by dependency, and solves time 0 as one system of initial assignments, assignment rules and defaults. <code>derivs_function()</code> compiles the result into a <code>function(.t, .y, .p)</code>.</li>
+<li>
 <a href="R/model.R">R/model.R</a> builds the <code>sbml_model</code>: one data frame per element kind, list columns for math and nested parts, accessors and printing.</li>
 <li>
 <a href="R/conditions.R">R/conditions.R</a> builds the classed conditions of design §8; their fields (<code>path</code>, <code>attribute</code>, <code>section</code>, <code>package</code>) are what tests assert on.</li>
@@ -112,6 +114,8 @@
 <strong>Writing is Level 3 Version 2 only</strong> (D9), and every supported Test Suite case must pass again after a write and re-read.</li>
 <li>
 <strong>One operator table drives MathML in both directions</strong> (§6.2). Adding a mapping on one side only breaks the round trip.</li>
+<li>
+<strong>Internal names start with “.”</strong> (<code>.amount.S1</code>, <code>.local.r1.k</code>, <code>.time</code>, the <code>.t</code>, <code>.y</code>, <code>.p</code> arguments). SBML ids cannot contain “.”, so these never collide with model symbols. Test Suite cases name symbols <code>time</code>, <code>pi</code> and <code>y</code>; a bare name of that kind broke derivation before (design D16).</li>
 <li>
 <strong>The Test Suite pass count only goes up.</strong> Stage 0 records the supported tags and the expected count per stage.</li>
 </ul></div>
