@@ -1,0 +1,53 @@
+# The SBML Test Suite oracle (design section 7). r-actions has no workflow
+# for it (Q6), so it lives here. The suite is LGPL 2.1 and never committed
+# (D5): it is downloaded by tools/fetch-test-suite.sh and cached.
+on:
+  push:
+    branches: [main, master]
+  pull_request:
+
+name: test-suite
+
+permissions: read-all
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.event.pull_request.number || github.run_id }}
+  cancel-in-progress: true
+
+jobs:
+  test-suite:
+    runs-on: ubuntu-latest
+    env:
+      GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
+      ZUSBML_TEST_SUITE: ${{ github.workspace }}/sbml-test-suite
+      ZUSBML_REQUIRE_SUITE: "true"
+      ZUSBML_SUITE_REPORT: ${{ github.workspace }}/suite-report.csv
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: r-lib/actions/setup-r@v2
+        with:
+          use-public-rspm: true
+
+      - uses: r-lib/actions/setup-r-dependencies@v2
+        with:
+          extra-packages: any::pkgload, local::.
+
+      - uses: actions/cache@v4
+        with:
+          path: sbml-test-suite
+          key: sbml-test-suite-${{ hashFiles('tools/fetch-test-suite.sh') }}
+
+      - name: Fetch the SBML Test Suite
+        run: tools/fetch-test-suite.sh sbml-test-suite
+
+      - name: Run the suite
+        run: testthat::test_local(filter = "suite", stop_on_failure = TRUE)
+        shell: Rscript {0}
+
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: suite-report
+          path: suite-report.csv
+          if-no-files-found: ignore

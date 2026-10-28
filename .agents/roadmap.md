@@ -17,7 +17,7 @@ portfolio's.
 | Stage | Title | CI | Issue | Pull request | Done |
 | --- | --- | --- | --- | --- | --- |
 | 0 | [Package identity](#stage-0--package-identity) | quick | [#2](https://github.com/pedrobtz/zusbml/issues/2) | [#15](https://github.com/pedrobtz/zusbml/pull/15) | 2026-10-28 |
-| 1 | [Oracle harness](#stage-1--oracle-harness) | full | [#3](https://github.com/pedrobtz/zusbml/issues/3) | | |
+| 1 | [Oracle harness](#stage-1--oracle-harness) | full | [#3](https://github.com/pedrobtz/zusbml/issues/3) | | 2026-10-28 |
 | 2 | [Document reader and model object](#stage-2--document-reader-and-model-object) | quick | [#4](https://github.com/pedrobtz/zusbml/issues/4) | | |
 | 3 | [MathML](#stage-3--mathml) | quick | [#5](https://github.com/pedrobtz/zusbml/issues/5) | | |
 | 4 | [Derivation without events](#stage-4--derivation-without-events) | quick | [#6](https://github.com/pedrobtz/zusbml/issues/6) | | |
@@ -92,6 +92,21 @@ every later stage reports a number against them.
   reason.
 - `nosuggests` passes in the full profile.
 - The supported tag set and the per-stage pass counts are committed.
+
+**Floors.** Test Suite 3.5.0 has 1,823 semantic cases; 1,692 have a Level
+3 Version 2 file and are run. Under Q2, 1,386 are supported (966 without
+events, 420 with) and 306 unsupported (272 by tag, 34 flux-balance).
+`tests/testthat/suite-floor.dcf` holds the minimums the current stage must
+meet. Targets, recorded 2026-10-28:
+
+| After stage | read | pass | refused |
+| --- | --- | --- | --- |
+| 1 | 0 | 0 | 0 |
+| 2 | 1,386 | 0 | 157 (SBML package cases, refused on read) |
+| 4 | 1,386 | 966 | 306 |
+| 5 | 1,386 | 1,386 | 306 |
+
+A stage that falls short records the gap and the case ids here.
 
 **Design.** §7, §9, §15 Q2 and Q3.
 
