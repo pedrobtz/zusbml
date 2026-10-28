@@ -79,6 +79,7 @@ sbml_odes <- function(m) {
   )
   assignments <- sort_definitions(assignments, "assignment rules")
 
+  refuse_unknown_names(m, roles, rhs, assignments)
   values <- initial_values(m, symbols, roles, rhs, assignments)
   constant_ids <- roles$name[roles$role == "constant"]
   states <- roles[roles$role == "state", c("name", "symbol", "kind")]
@@ -98,6 +99,39 @@ sbml_odes <- function(m) {
 #' @export
 sbml_initial_state <- function(m) {
   sbml_odes(m)$initial
+}
+
+# Every name in the derived math must be a model symbol (or a local
+# parameter, which roles also lists), the time csymbol or pi. Anything else
+# would otherwise fail inside the solver, or, before math was evaluated in an
+# allowlisted environment, resolve to a base R object such as `T` (design
+# D20).
+refuse_unknown_names <- function(m, roles, rhs, assignments) {
+  exprs <- c(rhs, assignments, m$initial_assignments$math)
+  for (e in m$events$trigger) {
+    exprs <- c(exprs, list(e$math))
+  }
+  for (p in c("priority", "delay")) {
+    for (e in m$events[[p]]) {
+      exprs <- c(exprs, list(e$math))
+    }
+  }
+  for (a in m$events$assignments) {
+    exprs <- c(exprs, a$math)
+  }
+  used <- unique(unlist(lapply(exprs, all.vars)))
+  known <- c(roles$name, ".time", "time", "pi")
+  unknown <- setdiff(used, known)
+  if (length(unknown) > 0) {
+    abort_derive(
+      paste0(
+        "The math uses ",
+        paste0("'", unknown, "'", collapse = ", "),
+        ", which the model does not define."
+      ),
+      unknown
+    )
+  }
 }
 
 abort_derive <- function(message, ids) {
@@ -185,6 +219,8 @@ model_math <- function(m) {
 
 # Replace every call to a function definition by its body, with the bound
 # variables substituted by the arguments, until none is left.
+max_inlined_size <- 1e5
+
 inline_functions <- function(m) {
   if (nrow(m$functions) == 0) {
     return(m)
@@ -204,6 +240,12 @@ inline_functions <- function(m) {
     fn <- expr[[1]]
     if (is.name(fn) && as.character(fn) %in% names(lambdas)) {
       lambda <- lambdas[[as.character(fn)]]
+      if (is.null(lambda)) {
+        abort_derive(
+          paste0("Function '", fn, "' is called but has no math."),
+          as.character(fn)
+        )
+      }
       formals <- names(lambda[[2]])
       args <- as.list(expr)[-1]
       if (length(args) != length(formals)) {
@@ -224,6 +266,21 @@ inline_functions <- function(m) {
         substitute,
         list(lambda[[3]], stats::setNames(args, formals))
       )
+      # Each use of a bound variable copies its argument, so nested
+      # definitions can grow exponentially; a few kilobytes of document must
+      # not exhaust memory.
+      if (length(all.names(body)) > max_inlined_size) {
+        abort_derive(
+          paste0(
+            "Inlining function '",
+            fn,
+            "' gives an expression of more than ",
+            format(max_inlined_size, big.mark = ","),
+            " terms."
+          ),
+          as.character(fn)
+        )
+      }
       return(expand(body, depth + 1))
     }
     expr
@@ -636,7 +693,7 @@ sort_definitions <- function(defs, what) {
   }
   names_all <- names(defs)
   deps <- lapply(defs, function(e) {
-    setdiff(intersect(all.names(e), names_all), character(0))
+    intersect(all.vars(e), names_all)
   })
   done <- character(0)
   order <- character(0)

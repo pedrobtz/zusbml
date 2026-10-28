@@ -189,9 +189,20 @@ test_that("lambdas become function expressions and calls stay calls", {
 
   expect_identical(lambda, quote(function(x, y) x * y))
   expect_identical(
-    from_mathml("<apply><ci>f</ci><ci>a</ci><cn>2</cn></apply>"),
+    from_mathml(
+      "<apply><ci>f</ci><ci>a</ci><cn>2</cn></apply>",
+      functions = "f"
+    ),
     quote(f(a, 2))
   )
+})
+
+test_that("a call to anything but a function definition is a parse error", {
+  err <- expect_error(
+    from_mathml("<apply><ci>system</ci><cn>1</cn></apply>"),
+    class = "zusbml_parse_error"
+  )
+  expect_equal(err$section, "3.4")
 })
 
 test_that("semantics reads its first child", {
