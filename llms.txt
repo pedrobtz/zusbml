@@ -1,13 +1,45 @@
 # zusbml
 
-zusbml reads SBML models into R, writes them back, and derives the
-equations a solver needs. It is under development; see the
-[roadmap](https://github.com/pedrobtz/zusbml/blob/main/.agents/roadmap.md).
+## Overview
+
+[SBML](https://sbml.org), the Systems Biology Markup Language, is how
+models of biochemical networks, pharmacokinetics and cell signaling are
+shared: hundreds of them are curated in
+[BioModels](https://www.ebi.ac.uk/biomodels/). But an SBML file
+describes reactions between species in compartments, and a solver wants
+`dX/dt` for each state. The translation, with amounts against
+concentrations, compartments that change size, conversion factors and
+events, is where hand-written versions go wrong. The R packages that
+read SBML either need the libSBML system library or are no longer
+maintained.
+
+zusbml reads an SBML document into one R object, writes it back as SBML,
+and derives from it the equations a solver needs, with nothing but R
+installed.
+
+- **Derivation is the point.**
+  [`sbml_odes()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
+  gives the states, their right-hand sides, the assignments and the
+  events as R expressions;
+  [`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)
+  turns them into a function for
+  [deSolve](https://cran.r-project.org/package=deSolve), with SBML’s
+  event semantics (delays, priorities, persistence) included.
+- **Checked against the SBML Test Suite.** All 1,384 cases of the [SBML
+  Test Suite](https://github.com/sbmlteam/sbml-test-suite) 3.5.0 within
+  the supported set reproduce their reference results under each case’s
+  own tolerances. The other 308 Level 3 Version 2 cases use algebraic
+  rules, `delay`, fast reactions or SBML packages, and are refused by
+  name rather than approximated.
+- **Pure R.** The only package zusbml imports is
+  [zuxml](https://github.com/pedrobtz/zuxml), for the XML; there is no
+  system library to install.
+- **Round trips.** Reading, writing and reading again gives an identical
+  model, for every readable Test Suite case and fifty curated BioModels.
 
 ## Installation
 
-You can install the development version of zusbml from
-[GitHub](https://github.com/) with:
+zusbml is not on CRAN yet. Install the development version from GitHub:
 
 ``` r
 
@@ -15,12 +47,137 @@ You can install the development version of zusbml from
 pak::pak("pedrobtz/zusbml")
 ```
 
+## Usage
+
+``` r
+
+library(zusbml)
+```
+
+The package comes with a small model of a drug taken by mouth: absorbed
+from the gut into the central compartment, eliminated from there, and
+dosed a second time at hour 12.
+[`sbml_read()`](https://pedrobtz.github.io/zusbml/reference/sbml_read.md)
+takes a file, a URL or the XML itself.
+
+``` r
+
+m <- sbml_read(system.file("extdata", "dosing.xml", package = "zusbml"))
+m
+#> <sbml_model 'dosing'> SBML Level 3 Version 2
+#>   compartments  2
+#>   species       2
+#>   parameters    3
+#>   reactions     2
+#>   events        1
+```
+
+Each kind of element is a data frame. The drug in the gut is an amount;
+the drug in the central compartment is a concentration.
+
+``` r
+
+sbml_species(m)[, c("id", "compartment", "initial_amount", "has_only_substance_units")]
+#>         id compartment initial_amount has_only_substance_units
+#> 1 drug_gut         gut            100                     TRUE
+#> 2     drug     central              0                    FALSE
+```
+
+[`sbml_odes()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
+derives the equations. The concentration’s right-hand side is divided by
+the volume of its compartment, and each reaction id stands for its rate.
+
+``` r
+
+eq <- sbml_odes(m)
+eq$rhs
+#> $drug_gut
+#> -absorption
+#> 
+#> $drug
+#> (absorption - elimination)/central
+eq$assignments
+#> $absorption
+#> ka * drug_gut
+#> 
+#> $elimination
+#> ke * drug * central
+```
+
+[`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)
+gives deSolve what it needs, including the event: the drug in the gut
+goes back up at hour 12.
+
+``` r
+
+f <- sbml_derivs(m)
+deSolve::ode(
+  attr(f, "y0"), times = c(0, 6, 12, 18, 24), func = f, parms = attr(f, "parms"),
+  method = "lsodar", rootfunc = attr(f, "rootfunc"), events = attr(f, "events")
+)
+#>   time     drug_gut     drug
+#> 1    0 1.000000e+02 0.000000
+#> 2    6 2.478742e-01 3.733943
+#> 3   12 1.000006e+02 1.133898
+#> 4   18 2.478759e-01 4.075490
+#> 5   24 6.144424e-04 1.236769
+```
+
+[`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
+writes SBML Level 3 Version 2, and reading it back gives the same model.
+[`sbml_to_rxode2()`](https://pedrobtz.github.io/zusbml/reference/sbml_to_rxode2.md)
+writes the equations for
+[rxode2](https://cran.r-project.org/package=rxode2) instead.
+
+``` r
+
+identical(sbml_read(sbml_write(m)), m)
+#> [1] TRUE
+```
+
+Functions are named `sbml_*()`:
+[`sbml_read()`](https://pedrobtz.github.io/zusbml/reference/sbml_read.md)
+and
+[`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
+for documents, an accessor per element kind, and
+[`sbml_odes()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md),
+[`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)
+and
+[`sbml_to_rxode2()`](https://pedrobtz.github.io/zusbml/reference/sbml_to_rxode2.md)
+for equations.
+
+## Learn more
+
+- [Simulating SBML
+  models](https://pedrobtz.github.io/zusbml/articles/zusbml.html) walks
+  through reading, deriving and simulating a model, with events.
+- [`?zusbml`](https://pedrobtz.github.io/zusbml/reference/zusbml-package.md)
+  lists what is supported and what is refused.
+- The [reference index](https://pedrobtz.github.io/zusbml/reference/)
+  documents every function.
+
+## Related work
+
+zusbml follows the [SBML Level 3 Version 2 Core
+specification](https://sbml.org/documents/specifications/) and reads
+Level 2 Versions 4 and 5 by mapping them to it. It is checked against
+the SBML Test Suite and curated models from BioModels, neither of which
+it ships. [libSBML](https://sbml.org/software/libsbml/) is the reference
+implementation; zusbml does not use it.
+
 # Package index
 
-## All functions
+## Read and write
 
-- [`sbml_check()`](https://pedrobtz.github.io/zusbml/reference/sbml_check.md)
-  : Check a model's structure
+- [`sbml_read()`](https://pedrobtz.github.io/zusbml/reference/sbml_read.md)
+  : Read an SBML document
+- [`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
+  : Write a model as SBML
+- [`sbml_write_json()`](https://pedrobtz.github.io/zusbml/reference/sbml_write_json.md)
+  : Write a model as JSON
+
+## Model contents
+
 - [`sbml_compartments()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   [`sbml_species()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   [`sbml_parameters()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
@@ -32,21 +189,32 @@ pak::pak("pedrobtz/zusbml")
   [`sbml_constraints()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   [`sbml_unit_definitions()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   : Model components
-- [`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)
-  : A derivative function for deSolve
 - [`sbml_math()`](https://pedrobtz.github.io/zusbml/reference/sbml_math.md)
   : Show model math as R code
+- [`sbml_check()`](https://pedrobtz.github.io/zusbml/reference/sbml_check.md)
+  : Check a model's structure
+
+## Equations
+
 - [`sbml_odes()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
   [`sbml_initial_state()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
   : Derive the equations of a model
-- [`sbml_read()`](https://pedrobtz.github.io/zusbml/reference/sbml_read.md)
-  : Read an SBML document
+- [`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)
+  : A derivative function for deSolve
 - [`sbml_to_rxode2()`](https://pedrobtz.github.io/zusbml/reference/sbml_to_rxode2.md)
   : Write a model as rxode2 text
-- [`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
-  : Write a model as SBML
-- [`sbml_write_json()`](https://pedrobtz.github.io/zusbml/reference/sbml_write_json.md)
-  : Write a model as JSON
+
+## Package
+
+- [`zusbml`](https://pedrobtz.github.io/zusbml/reference/zusbml-package.md)
+  [`zusbml-package`](https://pedrobtz.github.io/zusbml/reference/zusbml-package.md)
+  : zusbml: Read, Write and Derive Equations from 'SBML' Models
 - [`zusbml_info()`](https://pedrobtz.github.io/zusbml/reference/zusbml_info.md)
   : What this build of zusbml reads and writes
 
+# Articles
+
+### Articles
+
+- [Simulating SBML
+  models](https://pedrobtz.github.io/zusbml/articles/zusbml.md):

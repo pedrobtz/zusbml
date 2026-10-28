@@ -15,7 +15,12 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/zusbml.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/zusbml.html">Simulating SBML models</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -38,6 +43,25 @@
     </div>
 
 
+    <div class="section level2">
+    <h2 id="scope">Scope<a class="anchor" aria-label="anchor" href="#scope"></a></h2>
+
+
+<p>zusbml reads SBML Level 3 Versions 1 and 2 core, and Level 2 Versions 4
+and 5 mapped to the Level 3 meaning, and writes Level 3 Version 2.
+Derivation covers reactions, assignment and rate rules, initial
+assignments, function definitions, <code>rateOf</code>, conversion factors,
+compartments that change size, and events with delays, priorities and
+persistence.</p>
+<p>It refuses, with a <code>zusbml_unsupported</code> error naming the construct:</p><ul><li><p>SBML Level 3 packages (<code>comp</code>, <code>fbc</code>, <code>layout</code>, <code>qual</code>, ...), unless
+<code>sbml_read(ignore_packages = TRUE)</code>;</p></li>
+<li><p>Level 1 and Level 2 Versions 1 to 3;</p></li>
+<li><p>in derivation, algebraic rules (a DAE), the <code>delay</code> csymbol (a delay
+differential equation) and fast reactions;</p></li>
+<li><p>in <code><a href="sbml_to_rxode2.html">sbml_to_rxode2()</a></code>, events, unless dropped on request.</p></li>
+</ul><p>It does not check units, validate against libSBML's full rule set, or
+simulate on its own: <code><a href="sbml_derivs.html">sbml_derivs()</a></code> hands the equations to deSolve.</p>
+    </div>
     <div class="section level2">
     <h2 id="see-also">See also<a class="anchor" aria-label="anchor" href="#see-also"></a></h2>
     <div class="dont-index"><p>Useful links:</p><ul><li><p><a href="https://pedrobtz.github.io/zusbml/">https://pedrobtz.github.io/zusbml/</a></p></li>

@@ -15,7 +15,12 @@
     </button>
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
-      <ul class="navbar-nav me-auto"><li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+      <ul class="navbar-nav me-auto"><li class="nav-item"><a class="nav-link" href="../articles/zusbml.html">Get started</a></li>
+<li class="active nav-item"><a class="nav-link" href="../reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles"><li><a class="dropdown-item" href="../articles/zusbml.html">Simulating SBML models</a></li>
+  </ul></li>
 <li class="nav-item"><a class="nav-link" href="../news/index.html">Changelog</a></li>
       </ul><ul class="navbar-nav"><li class="nav-item"><form class="form-inline" role="search">
  <input class="form-control" type="search" name="search-input" id="search-input" autocomplete="off" aria-label="Search site" placeholder="Search for" data-search-index="../search.json"></form></li>
@@ -32,7 +37,7 @@
     </div>
 
     <div class="section level2">
-      <h2 id="all-functions">All functions<a class="anchor" aria-label="anchor" href="#all-functions"></a></h2>
+      <h2 id="read-and-write">Read and write<a class="anchor" aria-label="anchor" href="#read-and-write"></a></h2>
 
 
 
@@ -43,52 +48,10 @@
 
       <dl><dt>
 
-          <code><a href="sbml_check.html">sbml_check()</a></code>
-
-        </dt>
-        <dd>Check a model's structure</dd>
-
-        <dt>
-
-          <code><a href="sbml_components.html">sbml_compartments()</a></code> <code><a href="sbml_components.html">sbml_species()</a></code> <code><a href="sbml_components.html">sbml_parameters()</a></code> <code><a href="sbml_components.html">sbml_reactions()</a></code> <code><a href="sbml_components.html">sbml_rules()</a></code> <code><a href="sbml_components.html">sbml_events()</a></code> <code><a href="sbml_components.html">sbml_functions()</a></code> <code><a href="sbml_components.html">sbml_initial_assignments()</a></code> <code><a href="sbml_components.html">sbml_constraints()</a></code> <code><a href="sbml_components.html">sbml_unit_definitions()</a></code>
-
-        </dt>
-        <dd>Model components</dd>
-
-        <dt>
-
-          <code><a href="sbml_derivs.html">sbml_derivs()</a></code>
-
-        </dt>
-        <dd>A derivative function for deSolve</dd>
-
-        <dt>
-
-          <code><a href="sbml_math.html">sbml_math()</a></code>
-
-        </dt>
-        <dd>Show model math as R code</dd>
-
-        <dt>
-
-          <code><a href="sbml_odes.html">sbml_odes()</a></code> <code><a href="sbml_odes.html">sbml_initial_state()</a></code>
-
-        </dt>
-        <dd>Derive the equations of a model</dd>
-
-        <dt>
-
           <code><a href="sbml_read.html">sbml_read()</a></code>
 
         </dt>
         <dd>Read an SBML document</dd>
-
-        <dt>
-
-          <code><a href="sbml_to_rxode2.html">sbml_to_rxode2()</a></code>
-
-        </dt>
-        <dd>Write a model as rxode2 text</dd>
 
         <dt>
 
@@ -103,6 +66,82 @@
 
         </dt>
         <dd>Write a model as JSON</dd>
+      </dl></div><div class="section level2">
+      <h2 id="model-contents">Model contents<a class="anchor" aria-label="anchor" href="#model-contents"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="sbml_components.html">sbml_compartments()</a></code> <code><a href="sbml_components.html">sbml_species()</a></code> <code><a href="sbml_components.html">sbml_parameters()</a></code> <code><a href="sbml_components.html">sbml_reactions()</a></code> <code><a href="sbml_components.html">sbml_rules()</a></code> <code><a href="sbml_components.html">sbml_events()</a></code> <code><a href="sbml_components.html">sbml_functions()</a></code> <code><a href="sbml_components.html">sbml_initial_assignments()</a></code> <code><a href="sbml_components.html">sbml_constraints()</a></code> <code><a href="sbml_components.html">sbml_unit_definitions()</a></code>
+
+        </dt>
+        <dd>Model components</dd>
+
+        <dt>
+
+          <code><a href="sbml_math.html">sbml_math()</a></code>
+
+        </dt>
+        <dd>Show model math as R code</dd>
+
+        <dt>
+
+          <code><a href="sbml_check.html">sbml_check()</a></code>
+
+        </dt>
+        <dd>Check a model's structure</dd>
+      </dl></div><div class="section level2">
+      <h2 id="equations">Equations<a class="anchor" aria-label="anchor" href="#equations"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="sbml_odes.html">sbml_odes()</a></code> <code><a href="sbml_odes.html">sbml_initial_state()</a></code>
+
+        </dt>
+        <dd>Derive the equations of a model</dd>
+
+        <dt>
+
+          <code><a href="sbml_derivs.html">sbml_derivs()</a></code>
+
+        </dt>
+        <dd>A derivative function for deSolve</dd>
+
+        <dt>
+
+          <code><a href="sbml_to_rxode2.html">sbml_to_rxode2()</a></code>
+
+        </dt>
+        <dd>Write a model as rxode2 text</dd>
+      </dl></div><div class="section level2">
+      <h2 id="package">Package<a class="anchor" aria-label="anchor" href="#package"></a></h2>
+
+
+
+      <dl></dl></div><div class="section level2">
+
+
+
+
+      <dl><dt>
+
+          <code><a href="zusbml-package.html">zusbml</a></code> <code><a href="zusbml-package.html">zusbml-package</a></code>
+
+        </dt>
+        <dd>zusbml: Read, Write and Derive Equations from 'SBML' Models</dd>
 
         <dt>
 
@@ -111,7 +150,8 @@
         </dt>
         <dd>What this build of zusbml reads and writes</dd>
       </dl></div>
-  </main></div>
+  </main><aside class="col-md-3"><nav id="toc" aria-label="Table of contents"><h2>On this page</h2>
+    </nav></aside></div>
 
 
     <footer><div class="pkgdown-footer-left">

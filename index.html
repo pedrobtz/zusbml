@@ -31,7 +31,14 @@
 
     <div id="navbar" class="collapse navbar-collapse ms-3">
       <ul class="navbar-nav me-auto">
+<li class="nav-item"><a class="nav-link" href="articles/zusbml.html">Get started</a></li>
 <li class="nav-item"><a class="nav-link" href="reference/index.html">Reference</a></li>
+<li class="nav-item dropdown">
+  <button class="nav-link dropdown-toggle" type="button" id="dropdown-articles" data-bs-toggle="dropdown" aria-expanded="false" aria-haspopup="true">Articles</button>
+  <ul class="dropdown-menu" aria-labelledby="dropdown-articles">
+<li><a class="dropdown-item" href="articles/zusbml.html">Simulating SBML models</a></li>
+  </ul>
+</li>
 <li class="nav-item"><a class="nav-link" href="news/index.html">Changelog</a></li>
       </ul>
 <ul class="navbar-nav">
@@ -51,14 +58,100 @@
 </h1></div>
 <!-- badges: start -->
 
-<p>zusbml reads SBML models into R, writes them back, and derives the equations a solver needs. It is under development; see the <a href="https://github.com/pedrobtz/zusbml/blob/main/.agents/roadmap.md" class="external-link">roadmap</a>.</p>
+<div class="section level2">
+<h2 id="overview">Overview<a class="anchor" aria-label="anchor" href="#overview"></a>
+</h2>
+<p><a href="https://sbml.org" class="external-link">SBML</a>, the Systems Biology Markup Language, is how models of biochemical networks, pharmacokinetics and cell signaling are shared: hundreds of them are curated in <a href="https://www.ebi.ac.uk/biomodels/" class="external-link">BioModels</a>. But an SBML file describes reactions between species in compartments, and a solver wants <code>dX/dt</code> for each state. The translation, with amounts against concentrations, compartments that change size, conversion factors and events, is where hand-written versions go wrong. The R packages that read SBML either need the libSBML system library or are no longer maintained.</p>
+<p>zusbml reads an SBML document into one R object, writes it back as SBML, and derives from it the equations a solver needs, with nothing but R installed.</p>
+<ul>
+<li>
+<strong>Derivation is the point.</strong> <code><a href="reference/sbml_odes.html">sbml_odes()</a></code> gives the states, their right-hand sides, the assignments and the events as R expressions; <code><a href="reference/sbml_derivs.html">sbml_derivs()</a></code> turns them into a function for <a href="https://cran.r-project.org/package=deSolve" class="external-link">deSolve</a>, with SBML’s event semantics (delays, priorities, persistence) included.</li>
+<li>
+<strong>Checked against the SBML Test Suite.</strong> All 1,384 cases of the <a href="https://github.com/sbmlteam/sbml-test-suite" class="external-link">SBML Test Suite</a> 3.5.0 within the supported set reproduce their reference results under each case’s own tolerances. The other 308 Level 3 Version 2 cases use algebraic rules, <code>delay</code>, fast reactions or SBML packages, and are refused by name rather than approximated.</li>
+<li>
+<strong>Pure R.</strong> The only package zusbml imports is <a href="https://github.com/pedrobtz/zuxml" class="external-link">zuxml</a>, for the XML; there is no system library to install.</li>
+<li>
+<strong>Round trips.</strong> Reading, writing and reading again gives an identical model, for every readable Test Suite case and fifty curated BioModels.</li>
+</ul>
+</div>
 <div class="section level2">
 <h2 id="installation">Installation<a class="anchor" aria-label="anchor" href="#installation"></a>
 </h2>
-<p>You can install the development version of zusbml from <a href="https://github.com/" class="external-link">GitHub</a> with:</p>
+<p>zusbml is not on CRAN yet. Install the development version from GitHub:</p>
 <div class="sourceCode" id="cb1"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="co"># install.packages("pak")</span></span>
 <span><span class="fu">pak</span><span class="fu">::</span><span class="fu"><a href="https://pak.r-lib.org/reference/pak.html" class="external-link">pak</a></span><span class="op">(</span><span class="st">"pedrobtz/zusbml"</span><span class="op">)</span></span></code></pre></div>
+</div>
+<div class="section level2">
+<h2 id="usage">Usage<a class="anchor" aria-label="anchor" href="#usage"></a>
+</h2>
+<div class="sourceCode" id="cb2"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="kw"><a href="https://rdrr.io/r/base/library.html" class="external-link">library</a></span><span class="op">(</span><span class="va"><a href="https://pedrobtz.github.io/zusbml/">zusbml</a></span><span class="op">)</span></span></code></pre></div>
+<p>The package comes with a small model of a drug taken by mouth: absorbed from the gut into the central compartment, eliminated from there, and dosed a second time at hour 12. <code><a href="reference/sbml_read.html">sbml_read()</a></code> takes a file, a URL or the XML itself.</p>
+<div class="sourceCode" id="cb3"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">m</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sbml_read.html">sbml_read</a></span><span class="op">(</span><span class="fu"><a href="https://rdrr.io/r/base/system.file.html" class="external-link">system.file</a></span><span class="op">(</span><span class="st">"extdata"</span>, <span class="st">"dosing.xml"</span>, package <span class="op">=</span> <span class="st">"zusbml"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="va">m</span></span>
+<span><span class="co">#&gt; &lt;sbml_model 'dosing'&gt; SBML Level 3 Version 2</span></span>
+<span><span class="co">#&gt;   compartments  2</span></span>
+<span><span class="co">#&gt;   species       2</span></span>
+<span><span class="co">#&gt;   parameters    3</span></span>
+<span><span class="co">#&gt;   reactions     2</span></span>
+<span><span class="co">#&gt;   events        1</span></span></code></pre></div>
+<p>Each kind of element is a data frame. The drug in the gut is an amount; the drug in the central compartment is a concentration.</p>
+<div class="sourceCode" id="cb4"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="reference/sbml_components.html">sbml_species</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"compartment"</span>, <span class="st">"initial_amount"</span>, <span class="st">"has_only_substance_units"</span><span class="op">)</span><span class="op">]</span></span>
+<span><span class="co">#&gt;         id compartment initial_amount has_only_substance_units</span></span>
+<span><span class="co">#&gt; 1 drug_gut         gut            100                     TRUE</span></span>
+<span><span class="co">#&gt; 2     drug     central              0                    FALSE</span></span></code></pre></div>
+<p><code><a href="reference/sbml_odes.html">sbml_odes()</a></code> derives the equations. The concentration’s right-hand side is divided by the volume of its compartment, and each reaction id stands for its rate.</p>
+<div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">eq</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sbml_odes.html">sbml_odes</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span>
+<span><span class="va">eq</span><span class="op">$</span><span class="va">rhs</span></span>
+<span><span class="co">#&gt; $drug_gut</span></span>
+<span><span class="co">#&gt; -absorption</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $drug</span></span>
+<span><span class="co">#&gt; (absorption - elimination)/central</span></span>
+<span><span class="va">eq</span><span class="op">$</span><span class="va">assignments</span></span>
+<span><span class="co">#&gt; $absorption</span></span>
+<span><span class="co">#&gt; ka * drug_gut</span></span>
+<span><span class="co">#&gt; </span></span>
+<span><span class="co">#&gt; $elimination</span></span>
+<span><span class="co">#&gt; ke * drug * central</span></span></code></pre></div>
+<p><code><a href="reference/sbml_derivs.html">sbml_derivs()</a></code> gives deSolve what it needs, including the event: the drug in the gut goes back up at hour 12.</p>
+<div class="sourceCode" id="cb6"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="va">f</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sbml_derivs.html">sbml_derivs</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span>
+<span><span class="fu">deSolve</span><span class="fu">::</span><span class="fu"><a href="https://rdrr.io/pkg/deSolve/man/ode.html" class="external-link">ode</a></span><span class="op">(</span></span>
+<span>  <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">f</span>, <span class="st">"y0"</span><span class="op">)</span>, times <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="fl">0</span>, <span class="fl">6</span>, <span class="fl">12</span>, <span class="fl">18</span>, <span class="fl">24</span><span class="op">)</span>, func <span class="op">=</span> <span class="va">f</span>, parms <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">f</span>, <span class="st">"parms"</span><span class="op">)</span>,</span>
+<span>  method <span class="op">=</span> <span class="st">"lsodar"</span>, rootfunc <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">f</span>, <span class="st">"rootfunc"</span><span class="op">)</span>, events <span class="op">=</span> <span class="fu"><a href="https://rdrr.io/r/base/attr.html" class="external-link">attr</a></span><span class="op">(</span><span class="va">f</span>, <span class="st">"events"</span><span class="op">)</span></span>
+<span><span class="op">)</span></span>
+<span><span class="co">#&gt;   time     drug_gut     drug</span></span>
+<span><span class="co">#&gt; 1    0 1.000000e+02 0.000000</span></span>
+<span><span class="co">#&gt; 2    6 2.478742e-01 3.733943</span></span>
+<span><span class="co">#&gt; 3   12 1.000006e+02 1.133898</span></span>
+<span><span class="co">#&gt; 4   18 2.478759e-01 4.075490</span></span>
+<span><span class="co">#&gt; 5   24 6.144424e-04 1.236769</span></span></code></pre></div>
+<p><code><a href="reference/sbml_write.html">sbml_write()</a></code> writes SBML Level 3 Version 2, and reading it back gives the same model. <code><a href="reference/sbml_to_rxode2.html">sbml_to_rxode2()</a></code> writes the equations for <a href="https://cran.r-project.org/package=rxode2" class="external-link">rxode2</a> instead.</p>
+<div class="sourceCode" id="cb7"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="reference/sbml_read.html">sbml_read</a></span><span class="op">(</span><span class="fu"><a href="reference/sbml_write.html">sbml_write</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">)</span>, <span class="va">m</span><span class="op">)</span></span>
+<span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p>Functions are named <code>sbml_*()</code>: <code><a href="reference/sbml_read.html">sbml_read()</a></code> and <code><a href="reference/sbml_write.html">sbml_write()</a></code> for documents, an accessor per element kind, and <code><a href="reference/sbml_odes.html">sbml_odes()</a></code>, <code><a href="reference/sbml_derivs.html">sbml_derivs()</a></code> and <code><a href="reference/sbml_to_rxode2.html">sbml_to_rxode2()</a></code> for equations.</p>
+</div>
+<div class="section level2">
+<h2 id="learn-more">Learn more<a class="anchor" aria-label="anchor" href="#learn-more"></a>
+</h2>
+<ul>
+<li>
+<a href="https://pedrobtz.github.io/zusbml/articles/zusbml.html">Simulating SBML models</a> walks through reading, deriving and simulating a model, with events.</li>
+<li>
+<code><a href="reference/zusbml-package.html">?zusbml</a></code> lists what is supported and what is refused.</li>
+<li>The <a href="https://pedrobtz.github.io/zusbml/reference/">reference index</a> documents every function.</li>
+</ul>
+</div>
+<div class="section level2">
+<h2 id="related-work">Related work<a class="anchor" aria-label="anchor" href="#related-work"></a>
+</h2>
+<p>zusbml follows the <a href="https://sbml.org/documents/specifications/" class="external-link">SBML Level 3 Version 2 Core specification</a> and reads Level 2 Versions 4 and 5 by mapping them to it. It is checked against the SBML Test Suite and curated models from BioModels, neither of which it ships. <a href="https://sbml.org/software/libsbml/" class="external-link">libSBML</a> is the reference implementation; zusbml does not use it.</p>
 </div>
 </div>
   </main><aside class="col-md-3"><div class="links">
@@ -95,6 +188,7 @@
 <div class="dev-status">
 <h2 data-toc-skip>Dev status</h2>
 <ul class="list-unstyled">
+<li><a href="https://lifecycle.r-lib.org/articles/stages.html#experimental" class="external-link"><img src="https://img.shields.io/badge/lifecycle-experimental-orange.svg" alt="Lifecycle: experimental"></a></li>
 <li><a href="https://github.com/pedrobtz/zusbml/actions/workflows/R-CMD-check.yaml" class="external-link"><img src="https://github.com/pedrobtz/zusbml/actions/workflows/R-CMD-check.yaml/badge.svg" alt="R-CMD-check"></a></li>
 <li><a href="https://github.com/pedrobtz/zusbml/actions/workflows/coverage.yaml" class="external-link"><img src="https://raw.githubusercontent.com/pedrobtz/zusbml/gh-pages/badges/coverage.svg" alt="coverage"></a></li>
 </ul>
