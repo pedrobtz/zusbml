@@ -443,6 +443,16 @@ decides it and the maintainer may overturn it.
   Without one (CRAN's nold build, macOS arm64) R reads the largest double back
   as `Inf` and the smallest normal ones off in the last bits; the test of the
   extremes skips there, and the package does not reimplement decimal parsing.
+- **D20 (M, 2026-10-28, review #25).** Math comes from untrusted documents, so
+  it is evaluated only in an environment built from an allowlist of base
+  functions (the ones the MathML table and the compiled derivative functions
+  produce) with the empty environment above it. The reader refuses an
+  `<apply>` whose `<ci>` head is not a function definition of the document,
+  refuses function definitions named like those built-ins (`exp`, `max`, ...),
+  and requires a function definition's math to be a lambda; derivation refuses
+  a name the model does not define and caps inlined function definitions at
+  10^5 terms. Before this, a document could call `system()` from
+  `sbml_odes()`.
 - **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
   in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
   added after it is.

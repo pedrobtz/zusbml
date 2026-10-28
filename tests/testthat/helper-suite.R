@@ -343,7 +343,11 @@ suite_math_drift <- function(m) {
   drift <- character(0)
   for (expr in suite_model_math(m)) {
     text <- r_to_mathml(expr, ids)
-    back <- mathml_to_r(zuxml::xml_root(zuxml::xml_parse(text)), ids = ids)
+    back <- mathml_to_r(
+      zuxml::xml_root(zuxml::xml_parse(text)),
+      ids = ids,
+      functions = m$functions$id
+    )
     if (!identical(back, expr)) {
       drift <- c(drift, paste(deparse(expr), collapse = " "))
     }

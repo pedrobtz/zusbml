@@ -1,8 +1,12 @@
 test_that("function definitions, initial assignments and constraints read", {
   mathml <- '<math xmlns="http://www.w3.org/1998/Math/MathML"><cn>1</cn></math>'
+  lambda <- paste0(
+    '<math xmlns="http://www.w3.org/1998/Math/MathML">',
+    "<lambda><bvar><ci>x</ci></bvar><ci>x</ci></lambda></math>"
+  )
   m <- sbml_read(sbml_doc(paste0(
     '<listOfFunctionDefinitions><functionDefinition id="f">',
-    mathml,
+    lambda,
     "</functionDefinition></listOfFunctionDefinitions>",
     '<listOfInitialAssignments><initialAssignment symbol="x">',
     mathml,

@@ -154,8 +154,76 @@ math_ops <- data.frame(
 # Definitions for the operators kept under their SBML names. quotient and
 # rem follow MathML 2.0: the quotient truncates toward zero and the
 # remainder takes the sign of the dividend.
+# The only base R functions model math can reach: those the MathML table and
+# the compiled derivative functions produce. Its parent is the empty
+# environment, so a document cannot call system(), file.remove() or anything
+# else, and a name that is not a model symbol is an error rather than a base R
+# object such as `T` (design D20).
+math_base_names <- c(
+  "+",
+  "-",
+  "*",
+  "/",
+  "^",
+  "==",
+  "!=",
+  ">",
+  "<",
+  ">=",
+  "<=",
+  "&",
+  "|",
+  "!",
+  "&&",
+  "||",
+  "xor",
+  "if",
+  "(",
+  "{",
+  "<-",
+  "[[",
+  "function",
+  "c",
+  "list",
+  "as.numeric",
+  "environment",
+  "abs",
+  "exp",
+  "floor",
+  "ceiling",
+  "trunc",
+  "factorial",
+  "max",
+  "min",
+  "sqrt",
+  "log",
+  "log10",
+  "log2",
+  "sin",
+  "cos",
+  "tan",
+  "sinh",
+  "cosh",
+  "tanh",
+  "asin",
+  "acos",
+  "atan",
+  "asinh",
+  "acosh",
+  "atanh"
+)
+
+math_base <- local({
+  env <- new.env(parent = emptyenv())
+  for (name in math_base_names) {
+    assign(name, get(name, envir = baseenv()), envir = env)
+  }
+  env$pi <- pi
+  env
+})
+
 math_env <- local({
-  env <- new.env(parent = baseenv())
+  env <- new.env(parent = math_base)
   env$quotient <- function(x, y) trunc(x / y)
   env$rem <- function(x, y) x - y * trunc(x / y)
   env$implies <- function(x, y) !x | y
@@ -177,6 +245,7 @@ math_env <- local({
 # The ids of the document being read or written; see mathml_to_r().
 math_context <- new.env(parent = emptyenv())
 math_context$ids <- character(0)
+math_context$functions <- character(0)
 
 time_name <- function(ids = math_context$ids) {
   if ("time" %in% ids) quote(.time) else quote(time)
@@ -196,11 +265,13 @@ mathml_to_r <- function(
   node,
   path = "math",
   file = NA_character_,
-  ids = character(0)
+  ids = character(0),
+  functions = character(0)
 ) {
-  old <- math_context$ids
+  old <- as.list(math_context)
   math_context$ids <- ids
-  on.exit(math_context$ids <- old)
+  math_context$functions <- functions
+  on.exit(list2env(old, math_context))
   kids <- zuxml::xml_elements(node)
   if (length(kids) == 0) {
     return(NULL)
@@ -338,7 +409,19 @@ mathml_apply <- function(node, path, file) {
   }
 
   if (head_name == "ci") {
-    return(as.call(c(as.name(trimws(zuxml::xml_text(head))), args)))
+    name <- trimws(zuxml::xml_text(head))
+    if (!name %in% math_context$functions) {
+      math_error(
+        paste0(
+          "<apply> calls '",
+          name,
+          "', which is not a function definition"
+        ),
+        path,
+        file
+      )
+    }
+    return(as.call(c(as.name(name), args)))
   }
   if (head_name == "csymbol") {
     fn <- mathml_csymbol(head, path, file, applied = TRUE)

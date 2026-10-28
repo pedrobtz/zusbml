@@ -92,6 +92,10 @@ sbase_row <- function(el) {
   )
 }
 
+is_lambda <- function(x) {
+  is.call(x) && identical(x[[1]], as.name("function"))
+}
+
 # An element's math as an R expression, or NULL when it has none.
 math_of <- function(el) {
   wrapped <- el$children$math
@@ -109,6 +113,14 @@ part <- function(el, ...) {
 
 function_table <- function(items) {
   rows <- lapply(items, function(el) {
+    math <- math_of(el)
+    if (!is.null(math) && !is_lambda(math)) {
+      abort_parse(
+        "A function definition's math must be a <lambda>",
+        path = el$path,
+        section = "4.3"
+      )
+    }
     c(
       list(
         id = el$attributes$id,

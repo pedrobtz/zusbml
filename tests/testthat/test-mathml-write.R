@@ -55,7 +55,7 @@ test_that("every operator in the table survives a round trip", {
 
   for (expr in exprs) {
     expect_identical(
-      round_trip(expr),
+      round_trip(expr, functions = "f"),
       expr,
       info = paste(deparse(expr), collapse = "")
     )

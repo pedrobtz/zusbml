@@ -50,6 +50,7 @@ sbml_read <- function(x, ignore_packages = FALSE) {
   root <- zuxml::xml_root(doc)
   read_level(root, ctx)
   ctx$ids <- document_ids(doc)
+  ctx$functions <- function_ids(doc, ctx)
   sbml <- read_element(root, "sbml", "sbml", ctx)
   check_level_attributes(sbml, ctx)
   if (is.null(sbml$children$model)) {
@@ -71,6 +72,31 @@ document_ids <- function(doc) {
     zuxml::xml_attr(zuxml::xml_find(doc), "id", ns = NA)
   )
   unique(ids[!is.na(ids)])
+}
+
+# The ids of the document's function definitions: the only names math may
+# call (design D20). One that is also a built-in the math maps to, such as
+# `exp`, cannot be kept apart from it in R and is refused.
+function_ids <- function(doc, ctx) {
+  defs <- zuxml::xml_find(doc, "functionDefinition", ns = ctx$ns)
+  ids <- zuxml::xml_attr(defs, "id", ns = NA)
+  ids <- ids[!is.na(ids)]
+  builtin <- c(math_base_names, ls(math_env), "pi", "rateOf", "delay")
+  clash <- intersect(ids, builtin)
+  if (length(clash) > 0) {
+    abort_unsupported(
+      paste0(
+        "Function definition '",
+        clash[[1]],
+        "' has the name of a built-in ",
+        "function, which zusbml cannot tell apart from it."
+      ),
+      construct = "functionDefinition",
+      id = clash[[1]],
+      section = "4.3"
+    )
+  }
+  ids
 }
 
 # What an element holds, as XML text: notes, annotation and a constraint's
@@ -282,7 +308,7 @@ read_element <- function(node, kind, path, ctx) {
 
 read_child <- function(node, local, path, ctx) {
   if (local == "math") {
-    return(list(mathml_to_r(node, path, ctx$file, ctx$ids)))
+    return(list(mathml_to_r(node, path, ctx$file, ctx$ids, ctx$functions)))
   }
   if (local == "message") {
     return(xml_content(node))
