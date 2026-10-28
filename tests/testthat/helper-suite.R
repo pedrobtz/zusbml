@@ -130,12 +130,13 @@ suite_has <- function(name) {
 # cases and "refused" or "fail" for unsupported ones. Any condition that is
 # not a zusbml condition is "error".
 suite_run_case <- function(case) {
-  result <- function(status, message = "") {
+  result <- function(status, message = "", level2 = "none") {
     list(
       id = case$id,
       category = case$category,
       status = status,
-      message = message
+      message = message,
+      level2 = level2
     )
   }
   if (!suite_has("sbml_read")) {
@@ -213,7 +214,41 @@ suite_run_case <- function(case) {
     absolute = case$settings$absolute,
     relative = case$settings$relative
   )
-  if (ok) result("pass") else result("fail", "outside the tolerances")
+  if (!ok) {
+    return(result("fail", "outside the tolerances"))
+  }
+  result("pass", level2 = suite_level2(case, expected))
+}
+
+# The case's Level 2 Version 5 file, when it has one, must simulate to the
+# same results as its Level 3 file (design section 6.4): "pass", "fail: ..."
+# or "none".
+suite_level2 <- function(case, expected) {
+  path <- sub("-sbml-l3v2.xml$", "-sbml-l2v5.xml", case$model)
+  if (!file.exists(path)) {
+    return("none")
+  }
+  outcome <- tryCatch(
+    {
+      model <- sbml_read(path)
+      eq <- getExportedValue("zusbml", "sbml_odes")(model)
+      actual <- suite_simulate(model, eq, case$settings)
+      suite_compare(
+        actual,
+        expected,
+        absolute = case$settings$absolute,
+        relative = case$settings$relative
+      )
+    },
+    error = function(cnd) paste("fail:", conditionMessage(cnd))
+  )
+  if (isTRUE(outcome)) {
+    "pass"
+  } else if (isFALSE(outcome)) {
+    "fail: tolerances"
+  } else {
+    outcome
+  }
 }
 
 # Simulate derived equations on the case's time grid with deSolve, and
@@ -325,7 +360,12 @@ suite_cases <- function(dir) {
 # R CMD check limits tests to two); the test-suite workflow sets it.
 # Stochastic cases make a run vary only in their own rows.
 suite_run <- function(dir) {
-  run <- function(id) as.data.frame(suite_run_case(suite_case(dir, id)))
+  # Seeded per case, so the stochastic cases (equal-priority events run in
+  # random order) give the same result in every run and on any worker.
+  run <- function(id) {
+    set.seed(as.integer(id))
+    as.data.frame(suite_run_case(suite_case(dir, id)))
+  }
   ids <- suite_cases(dir)
   cores <- as.integer(Sys.getenv("ZUSBML_SUITE_CORES", "1"))
   rows <- if (cores > 1 && .Platform$OS.type == "unix") {

@@ -24,4 +24,5 @@ test_that("the SBML Test Suite meets the committed floors", {
   expect_gte(sum(report$status %in% c("read", "pass", "fail")), floor$read)
   expect_gte(sum(report$status == "pass"), floor$pass)
   expect_gte(sum(report$status == "refused"), floor$refused)
+  expect_gte(sum(report$level2 == "pass"), floor$level2)
 })

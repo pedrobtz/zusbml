@@ -1,16 +1,3 @@
-# summary() returns the counts
-
-    Code
-      print(s)
-    Output
-      SBML Level 3 Version 2 model 'decay'
-                functions    unit_definitions        compartments             species 
-                        0                   0                   1                   2 
-               parameters initial_assignments               rules         constraints 
-                        1                   0                   0                   0 
-                reactions              events 
-                        1                   0 
-
 # print() names ignored packages and handles an empty model
 
     Code
@@ -30,4 +17,17 @@
         species       2
         parameters    1
         reactions     1
+
+# summary() returns the counts
+
+    Code
+      print(s)
+    Output
+      SBML Level 3 Version 2 model 'decay'
+                functions    unit_definitions        compartments             species 
+                        0                   0                   1                   2 
+               parameters initial_assignments               rules         constraints 
+                        1                   0                   0                   0 
+                reactions              events 
+                        1                   0 
 

@@ -110,11 +110,12 @@ sbase_attrs <- function(row) {
   c(metaid = row$metaid, sboTerm = row$sbo_term)
 }
 
+# notes and annotation are stored without their own tag (xml_content()).
 sbase_children <- function(row) {
-  c(
-    if (!is.null(row$notes) && !is.na(row$notes)) row$notes,
-    if (!is.null(row$annotation) && !is.na(row$annotation)) row$annotation
-  )
+  wrap <- function(tag, x) {
+    if (!is.null(x) && !is.na(x)) paste0("<", tag, ">", x, "</", tag, ">")
+  }
+  c(wrap("notes", row$notes), wrap("annotation", row$annotation))
 }
 
 math_child <- function(expr, ids) {
@@ -290,7 +291,7 @@ write_model <- function(m, ids) {
           ),
           sbase_children(r),
           math_child(r$math, ids),
-          if (!is.na(r$message)) r$message
+          if (!is.na(r$message)) paste0("<message>", r$message, "</message>")
         )
       })
     ),

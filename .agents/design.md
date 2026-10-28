@@ -290,13 +290,18 @@ Reading is `zuxml` plus R list building; the targets keep the package
 usable on BioModels and the Test Suite, and say what the §14 C reader
 would buy.
 
-| Operation | Target |
-| --- | --- |
-| read a 1 MB curated BioModels document | under 300 ms |
-| read every Level 3 Version 2 Test Suite file | under 90 s |
-| MathML to R, 10⁵ nodes | under 1 s |
-| `sbml_odes()` on a 500-reaction model | under 500 ms |
-| write and re-read a 1 MB document | under 600 ms |
+| Operation | Target | Measured 2026-10-28 (Stage 7) |
+| --- | --- | --- |
+| read a 1 MB curated BioModels document | under 300 ms | 3.1 s per MB |
+| read every Level 3 Version 2 Test Suite file | under 90 s | 26 s |
+| MathML to R, 10⁵ nodes | under 1 s | 12.3 s |
+| `sbml_odes()` on a 500-reaction model | under 500 ms | 1.5 s |
+| write and re-read a 1 MB document | under 600 ms | 4.0 s per MB |
+
+Only the Test Suite target is met. The cost is per-node calls into `zuxml`
+from R; the §14 C reader on `zuxml`'s streaming API is the route to the
+targets (measured on a 6-core laptop, the 0.49 MB `BIOMD0000000183` and a
+generated 500-reaction model).
 
 ## 11. Roadmap
 
@@ -371,13 +376,15 @@ decides it and the maintainer may overturn it.
 - **D12 (M, 2026-10-28).** The Test Suite comparison is a test helper,
   not `daffiz`, which is not on CRAN and would need
   `Additional_repositories` in `Suggests`.
-- **D14 (M, 2026-10-28, Stage 2).** `notes`, `annotation` and a constraint's
-  `message` are kept as serialized XML text, not `zuxml` nodes: nodes hold
-  external pointers, so a re-read model would never be `identical()` and the
-  §2 round trip could not be tested. Math is R expressions (D6) from Stage 3
-  on. `notes` and `annotation` on `listOf*` containers are dropped. `zuxml`
-  0.1.0 parses and serializes but cannot build nodes, so `sbml_write()` emits
-  XML text itself.
+- **D14 (M, 2026-10-28, Stage 2).** The content of `notes`, `annotation` and a
+  constraint's `message` is kept as serialized XML text, without the element's
+  own tag, not as `zuxml` nodes: nodes hold external pointers, so a re-read
+  model would never be `identical()` and the §2 round trip could not be
+  tested. Math is R expressions (D6) from Stage 3 on. `notes` and `annotation`
+  on `listOf*` containers are dropped. `zuxml` 0.1.0 parses and serializes but
+  cannot build nodes, so `sbml_write()` emits XML text itself, wrapping that
+  content in tags of the namespace it writes (Stage 7: keeping the whole
+  element carried a Level 2 namespace into Level 3 output).
 - **D15 (M, 2026-10-28, Stage 3).** MathML operators with an exact base
   R equivalent become that call; the rest keep their SBML name as an R
   call: `quotient()`, `rem()`, `implies()`, `rateOf()`, `delay()`, and the
@@ -418,6 +425,17 @@ decides it and the maintainer may overturn it.
   take (a leading `_`, or reserved names such as `time` and `param`) a `.u`
   prefix. Its text parses in rxode2 for all 964 event-free supported Test
   Suite models.
+- **D18 (M, 2026-10-28, Stage 7).** Level 2 Versions 4 and 5 read into the
+  Level 3 shape (§6.4): Level 2 attribute defaults are applied on read;
+  `stoichiometryMath` becomes an assignment rule on the species reference's
+  id, generated as `<reaction>_<species>_stoichiometry` when it has none; a
+  kinetic law's `<parameter>`s are its local parameters; triggers get
+  `initialValue` and `persistent` true; the built-in units become the model's
+  unit attributes; compartment and species types, `charge` and `outside` are
+  dropped and listed in the model's `dropped` field. Level 2 Versions 1 to 3
+  and Level 1 are refused. In the first 400 curated BioModels, 214 are Level 2
+  Version 4 and 5 Level 3; 181 are Level 2 Versions 1 to 3, the design's own
+  example `BIOMD0000000012` among them.
 - **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
   in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
   added after it is.

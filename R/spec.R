@@ -35,7 +35,7 @@ attr_spec <- function(...) {
 }
 
 req <- function(type) list(type, TRUE)
-opt <- function(type) list(type, FALSE)
+opt <- function(type, default = NULL) list(type, FALSE, default)
 
 sbml_elements <- list(
   sbml = list(
@@ -247,10 +247,136 @@ sbml_lists <- list(
 
 # Level 3 Version 1 differs in one place the reader cares about: reaction's
 # required `fast` attribute, removed in Version 2.
-element_spec <- function(kind, version) {
+element_spec <- function(kind, version, level = 3L) {
+  if (level == 2L) {
+    return(level2_spec(kind))
+  }
   spec <- sbml_elements[[kind]]
   if (kind == "reaction" && version == 1L) {
     spec$attributes$fast <- req("boolean")
   }
   spec
 }
+
+# ---- Level 2 Versions 4 and 5 (design section 6.4) -------------------------
+
+# Level 2 differs from Level 3 in its defaults, in a few attributes Level 3
+# removed, which are read and dropped (`level2_dropped`), and in a few
+# elements: compartment and species types (dropped), stoichiometryMath (an
+# assignment rule in Level 3), a kinetic law's local parameters (written as
+# <parameter>), and triggers without initialValue or persistent.
+level2_dropped <- c("compartmentType", "speciesType", "charge", "outside")
+
+level2_overrides <- list(
+  sbml = list(children = "model"),
+  model = list(
+    attributes = sbase_attributes,
+    children = c(
+      "listOfFunctionDefinitions",
+      "listOfUnitDefinitions",
+      "listOfCompartmentTypes",
+      "listOfSpeciesTypes",
+      "listOfCompartments",
+      "listOfSpecies",
+      "listOfParameters",
+      "listOfInitialAssignments",
+      "listOfRules",
+      "listOfConstraints",
+      "listOfReactions",
+      "listOfEvents"
+    )
+  ),
+  unit = list(
+    attributes = attr_spec(
+      kind = req("string"),
+      exponent = opt("double", 1),
+      scale = opt("integer", 0L),
+      multiplier = opt("double", 1)
+    )
+  ),
+  compartmentType = list(
+    section = "L2V4 4.5",
+    attributes = attr_spec(),
+    children = character(0)
+  ),
+  speciesType = list(
+    section = "L2V4 4.6",
+    attributes = attr_spec(),
+    children = character(0)
+  ),
+  compartment = list(
+    attributes = attr_spec(
+      id = req("string"),
+      spatialDimensions = opt("double", 3),
+      size = opt("double"),
+      units = opt("string"),
+      constant = opt("boolean", TRUE),
+      compartmentType = opt("string"),
+      outside = opt("string")
+    )
+  ),
+  species = list(
+    attributes = attr_spec(
+      id = req("string"),
+      compartment = req("string"),
+      initialAmount = opt("double"),
+      initialConcentration = opt("double"),
+      substanceUnits = opt("string"),
+      hasOnlySubstanceUnits = opt("boolean", FALSE),
+      boundaryCondition = opt("boolean", FALSE),
+      constant = opt("boolean", FALSE),
+      speciesType = opt("string"),
+      charge = opt("integer")
+    )
+  ),
+  parameter = list(
+    attributes = attr_spec(
+      id = req("string"),
+      value = opt("double"),
+      units = opt("string"),
+      constant = opt("boolean", TRUE)
+    )
+  ),
+  reaction = list(
+    attributes = attr_spec(
+      id = req("string"),
+      reversible = opt("boolean", TRUE),
+      fast = opt("boolean", FALSE)
+    )
+  ),
+  speciesReference = list(
+    attributes = attr_spec(
+      species = req("string"),
+      stoichiometry = opt("double")
+    ),
+    children = "stoichiometryMath"
+  ),
+  stoichiometryMath = list(
+    section = "L2V4 4.13.3",
+    attributes = attr_spec(),
+    children = "math"
+  ),
+  kineticLaw = list(children = c("math", "listOfParameters")),
+  event = list(
+    attributes = attr_spec(
+      useValuesFromTriggerTime = opt("boolean", TRUE)
+    ),
+    children = c("trigger", "delay", "listOfEventAssignments")
+  ),
+  trigger = list(attributes = attr_spec())
+)
+
+level2_spec <- function(kind) {
+  spec <- sbml_elements[[kind]] %||% list(section = NA_character_)
+  override <- level2_overrides[[kind]]
+  for (field in names(override)) {
+    spec[[field]] <- override[[field]]
+  }
+  spec
+}
+
+level2_lists <- list(
+  listOfCompartmentTypes = "compartmentType",
+  listOfSpeciesTypes = "speciesType",
+  listOfParameters = "parameter"
+)

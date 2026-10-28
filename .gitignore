@@ -56,3 +56,4 @@ CRAN-SUBMISSION
 # SBML Test Suite, downloaded by tools/fetch-test-suite.sh (LGPL 2.1;
 # never committed, design D5)
 /sbml-test-suite/
+/biomodels/

@@ -7,6 +7,9 @@
 
 new_sbml_model <- function(sbml, ctx) {
   model <- sbml$children$model
+  if (ctx$level == 2L) {
+    model <- convert_level2(model, ctx)
+  }
   a <- model$attributes
   lists <- model$children
   structure(
@@ -44,7 +47,8 @@ new_sbml_model <- function(sbml, ctx) {
       constraints = constraint_table(lists$listOfConstraints),
       reactions = reaction_table(lists$listOfReactions),
       events = event_table(lists$listOfEvents),
-      ignored_packages = ctx$ignored
+      ignored_packages = ctx$ignored,
+      dropped = ctx$dropped
     ),
     class = "sbml_model"
   )
@@ -547,6 +551,14 @@ print.sbml_model <- function(x, ...) {
     cat(
       "  ignored packages: ",
       paste(x$ignored_packages, collapse = ", "),
+      "\n",
+      sep = ""
+    )
+  }
+  if (length(x$dropped) > 0) {
+    cat(
+      "  dropped from Level 2: ",
+      paste(x$dropped, collapse = ", "),
       "\n",
       sep = ""
     )

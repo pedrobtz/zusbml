@@ -17,7 +17,7 @@ NULL
 zusbml_info <- function() {
   list(
     version = as.character(utils::packageVersion("zusbml")),
-    read = c("3.1", "3.2"),
+    read = c("2.4", "2.5", "3.1", "3.2"),
     write = "3.2",
     packages = character(0)
   )

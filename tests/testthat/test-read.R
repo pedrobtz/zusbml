@@ -39,8 +39,8 @@ test_that("sbml_read() reads the model's attributes", {
   expect_true(is.na(m$area_units))
 })
 
-test_that("sbml_read() refuses other levels as unsupported", {
-  l2 <- '<sbml xmlns="http://www.sbml.org/sbml/level2/version4" level="2" version="4"><model/></sbml>'
+test_that("sbml_read() refuses Level 1 and Level 2 before Version 4", {
+  l2 <- '<sbml xmlns="http://www.sbml.org/sbml/level2/version3" level="2" version="3"><model/></sbml>'
   l1 <- '<sbml xmlns="http://www.sbml.org/sbml/level1" level="1" version="2"><model/></sbml>'
 
   expect_error(sbml_read(l2), class = "zusbml_unsupported")

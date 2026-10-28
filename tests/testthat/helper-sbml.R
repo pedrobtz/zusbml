@@ -259,3 +259,16 @@ growth <- function(events, p = 0) {
     events
   )
 }
+
+# A Level 2 document around a <model> body.
+l2_doc <- function(body = "", version = 4) {
+  paste0(
+    '<sbml xmlns="http://www.sbml.org/sbml/level2/version',
+    version,
+    '" level="2" version="',
+    version,
+    '"><model id="m">',
+    body,
+    "</model></sbml>"
+  )
+}
