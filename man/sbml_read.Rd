@@ -19,9 +19,10 @@ the dropped package names are kept in the model's \code{ignored_packages}.}
 An \code{sbml_model}.
 }
 \description{
-Reads an SBML Level 3 core document into an \code{sbml_model}. Every element
-carries the attributes the specification defines for the document's level
-and version; optional values without a Level 3 default read as \code{NA}.
+Reads an SBML core document into an \code{sbml_model}: Level 3 Versions 1 and
+2, and Level 2 Versions 4 and 5, which are mapped to their Level 3
+meaning. Every element carries the attributes Level 3 defines; optional
+values without a default read as \code{NA}.
 }
 \section{Errors}{
 
@@ -30,7 +31,10 @@ and version; optional values without a Level 3 default read as \code{NA}.
 attribute in the SBML namespace, a missing required attribute, or a
 value of the wrong type. Its \code{path} field names the element, for
 example \code{model/listOfSpecies/species[3]}, and \code{attribute} the attribute.
-\item \code{zusbml_unsupported} for SBML packages and for levels other than 3.
+\item \code{zusbml_unsupported} for SBML packages, Level 1, and Level 2 before
+Version 4.
+\item \code{zusbml_arg_error} for an argument of the wrong type, a missing file or
+a directory.
 }
 }
 

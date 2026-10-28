@@ -60,8 +60,9 @@ derive_events <- function(m, roles, rhs, assignments) {
 
 #' A derivative function for deSolve
 #'
-#' `sbml_derivs()` turns a model into a `function(t, y, parms)` for
-#' [deSolve::ode()]. The function carries what deSolve needs as attributes:
+#' `sbml_derivs()` turns a model into a derivative function for
+#' [deSolve::ode()], which calls it with time, state and parameters by
+#' position. The function carries what deSolve needs as attributes:
 #' `y0`, the states at time 0 after any events that fire then; `parms`, the
 #' constants; and, for a model with events, `rootfunc` and `events`, which
 #' run the events with the full SBML semantics: delays, persistence,

@@ -652,10 +652,7 @@ model_ids <- function(m) {
 
 check_model <- function(m) {
   if (!inherits(m, "sbml_model")) {
-    stop(
-      "`m` must be an sbml_model, as returned by sbml_read().",
-      call. = FALSE
-    )
+    abort_arg("`m` must be an sbml_model, as returned by sbml_read().", "m")
   }
 }
 

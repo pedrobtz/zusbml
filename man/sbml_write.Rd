@@ -17,20 +17,20 @@ The path, invisibly, or the document as a string when \code{path} is
 \code{NULL}.
 }
 \description{
-Writes an \code{sbml_model} as an SBML Level 3 Version 2 core document (design
-D9), whatever level and version it was read from. Attributes that are \code{NA}
+Writes an \code{sbml_model} as an SBML Level 3 Version 2 core document,
+whatever level and version it was read from. Attributes that are \code{NA}
 are left out; \code{notes}, \code{annotation} and constraint messages are written as
 they were read; math is written as MathML. Reading the result gives back
 an identical model for any Level 3 Version 2 input.
 }
 \details{
-\code{zuxml} cannot build nodes, so the document is written as text (design
-D14), escaping attribute values and names.
+The document is written as text, escaping attribute values and names.
 }
 \section{Errors}{
 
 \code{zusbml_write_error} for math with no MathML equivalent, naming the R
-call.
+call, for text with characters XML 1.0 does not allow, and for notes,
+annotation or messages that are not well-formed XML.
 }
 
 \examples{

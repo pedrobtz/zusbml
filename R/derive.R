@@ -38,15 +38,19 @@
 #'   * `constants`: a named numeric vector of the constants' values;
 #'   * `initial`: the states' values at time 0, as `sbml_initial_state()`;
 #'   * `species`: for each species, whether its symbol is an amount and its
-#'     compartment, to convert between amounts and concentrations.
+#'     compartment, to convert between amounts and concentrations;
+#'   * `events`: one list per event with its `id`, `trigger`,
+#'     `initial_value`, `persistent`, `priority` and `delay` expressions
+#'     (`NULL` when absent), `use_values_from_trigger_time`, and
+#'     `assignments`, a named list of expressions by target.
 #'
 #'   `sbml_initial_state()` returns a named numeric vector.
 #' @section Errors:
 #' * `zusbml_unsupported` for algebraic rules (the model is then a DAE),
-#'   the `delay` csymbol, fast reactions, and events, each naming the
-#'   element.
-#' * `zusbml_derive_error` for an assignment cycle or a missing value,
-#'   naming the ids involved in its `ids` field.
+#'   the `delay` csymbol and fast reactions, each naming the element.
+#' * `zusbml_derive_error` for an assignment cycle, a missing value, or a
+#'   name the model does not define, naming the ids involved in its `ids`
+#'   field.
 #' @export
 #' @examples
 #' m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))
@@ -857,7 +861,7 @@ species_info <- function(m, symbols) {
 
 # ---- Evaluation ------------------------------------------------------------
 
-# A function(t, y, p) for deSolve built from sbml_odes() output: it sets the
+# A function(.t, .y, .p) for deSolve built from sbml_odes() output: it sets the
 # constants, states and assignments in one environment and returns the
 # right-hand sides, plus the values of `outputs` (symbol names) as extra
 # columns.

@@ -20,8 +20,9 @@ A function with attributes \code{y0}, \code{parms}, and for models with
 events \code{rootfunc} and \code{events}.
 }
 \description{
-\code{sbml_derivs()} turns a model into a \verb{function(t, y, parms)} for
-\code{\link[deSolve:ode]{deSolve::ode()}}. The function carries what deSolve needs as attributes:
+\code{sbml_derivs()} turns a model into a derivative function for
+\code{\link[deSolve:ode]{deSolve::ode()}}, which calls it with time, state and parameters by
+position. The function carries what deSolve needs as attributes:
 \code{y0}, the states at time 0 after any events that fire then; \code{parms}, the
 constants; and, for a model with events, \code{rootfunc} and \code{events}, which
 run the events with the full SBML semantics: delays, persistence,
