@@ -65,6 +65,39 @@ jobs:
           path: suite-report.csv
           if-no-files-found: ignore
 
+  # One shard cannot check the counts in suite-floor.dcf, so this job
+  # combines the shards' reports and checks them: the suite cannot shrink
+  # without CI failing.
+  suite-floors:
+    needs: test-suite
+    runs-on: ubuntu-latest
+    env:
+      ZUSBML_SUITE_SKIP: ${{ github.event_name == 'pull_request' && !contains(github.event.pull_request.labels.*.name, 'full-ci') && '00966' || '' }}
+    steps:
+      - uses: actions/checkout@v6
+
+      - uses: r-lib/actions/setup-r@v2
+
+      - uses: actions/download-artifact@v4
+        with:
+          pattern: suite-report-*
+          path: reports
+
+      - name: Check the floors
+        run: |
+          source("tests/testthat/helper-suite.R")
+          files <- Sys.glob("reports/*/suite-report.csv")
+          if (length(files) != 2) stop("expected 2 shard reports, found ", length(files))
+          report <- do.call(rbind, lapply(files, utils::read.csv, colClasses = "character"))
+          if (anyDuplicated(report$id)) stop("a case ran in more than one shard")
+          floor <- suite_floor("tests/testthat/suite-floor.dcf")
+          failures <- suite_floor_failures(report, floor)
+          cat(nrow(report), "cases;", sum(report$status == "pass"), "pass;",
+              sum(report$status == "refused"), "refused;",
+              sum(report$level2 == "pass"), "pass from Level 2\n")
+          if (length(failures) > 0) stop(paste(failures, collapse = "\n"))
+        shell: Rscript {0}
+
   # The fifty fixed BioModels (design section 7), downloaded and cached like
   # the suite, in a job of their own so they run alongside it.
   biomodels:

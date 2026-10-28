@@ -32,10 +32,6 @@ test_that("every supported case passes and every other one is refused", {
   expect_equal(nrow(failing_level2), 0, info = show(failing_level2))
 
   if (suite_shard()[[2]] == 1) {
-    floor <- suite_floor()
-    expect_gte(sum(report$status %in% c("read", "pass", "fail")), floor$read)
-    expect_gte(sum(report$status == "pass"), floor$pass)
-    expect_gte(sum(report$status == "refused"), floor$refused)
-    expect_gte(sum(report$level2 == "pass"), floor$level2)
+    expect_equal(suite_floor_failures(report), character(0))
   }
 })

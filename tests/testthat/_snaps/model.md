@@ -9,15 +9,6 @@
         parameters    1
         reactions     1
 
-# print() names ignored packages and handles an empty model
-
-    Code
-      print(sbml_read(doc, ignore_packages = TRUE))
-    Output
-      <sbml_model> SBML Level 3 Version 1
-        (empty model)
-        ignored packages: fbc
-
 # summary() returns the counts
 
     Code
@@ -30,4 +21,13 @@
                         1                   0                   0                   0 
                 reactions              events 
                         1                   0 
+
+# print() names ignored packages and handles an empty model
+
+    Code
+      print(sbml_read(doc, ignore_packages = TRUE))
+    Output
+      <sbml_model> SBML Level 3 Version 1
+        (empty model)
+        ignored packages: fbc
 

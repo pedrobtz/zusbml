@@ -185,13 +185,20 @@ test_that("suite_run_case() reports a package document as refused", {
   expect_equal(suite_run_case(suite_case(dir, "00001"))$status, "refused")
 })
 
-test_that("suite_run() returns one row per case with a status", {
-  withr::local_envvar(ZUSBML_SUITE_SHARD = NA)
+test_that("suite_run() passes the fixture from both its files", {
+  skip_if_not_installed("deSolve")
+  withr::local_envvar(
+    ZUSBML_SUITE_SHARD = NA,
+    ZUSBML_SUITE_SKIP = NA,
+    ZUSBML_SUITE_CORES = NA
+  )
+
   report <- suite_run(fixture_suite())
 
   expect_named(report, c("id", "category", "status", "message", "level2"))
   expect_equal(report$id, "00000")
-  expect_true(report$status %in% c("pass", "read"))
+  expect_equal(report$status, "pass")
+  expect_equal(report$level2, "pass")
 })
 
 test_that("suite_floor() reads the committed floors as integers", {
@@ -211,4 +218,12 @@ test_that("suite_dir() errors when the suite is absent but required", {
   withr::local_envvar(ZUSBML_TEST_SUITE = "", ZUSBML_REQUIRE_SUITE = "true")
 
   expect_error(suite_dir(), class = "zusbml_suite_missing_error")
+})
+
+test_that("biomodels_dir() skips when absent and errors when required", {
+  withr::local_envvar(ZUSBML_BIOMODELS = "", ZUSBML_REQUIRE_BIOMODELS = "")
+  expect_condition(biomodels_dir(), class = "skip")
+
+  withr::local_envvar(ZUSBML_REQUIRE_BIOMODELS = "true")
+  expect_error(biomodels_dir(), class = "zusbml_biomodels_missing_error")
 })

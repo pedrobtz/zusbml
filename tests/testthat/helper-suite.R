@@ -120,15 +120,11 @@ suite_case <- function(dir, id) {
   )
 }
 
-suite_has <- function(name) {
-  name %in% getNamespaceExports("zusbml")
-}
-
-# One case through as much of the pipeline as exists: "pending" before the
-# reader, "read" (once its math survives R -> MathML -> R and the model
-# survives write and re-read) before derivation, then "pass" or "fail" for supported
-# cases and "refused" or "fail" for unsupported ones. Any condition that is
-# not a zusbml condition is "error".
+# One case through the whole pipeline: read; check that its math survives
+# R -> MathML -> R and the model survives write and re-read; derive;
+# simulate; compare with the results. "pass" or "fail" for supported cases,
+# "refused" or "fail" for unsupported ones; any condition that is not a
+# zusbml condition is "error", a bug in the package or the harness.
 suite_run_case <- function(case) {
   result <- function(status, message = "", level2 = "none") {
     list(
@@ -139,58 +135,35 @@ suite_run_case <- function(case) {
       level2 = level2
     )
   }
-  if (!suite_has("sbml_read")) {
-    return(result("pending"))
-  }
-  outcome <- tryCatch(
-    {
-      sbml_read <- getExportedValue("zusbml", "sbml_read")
-      model <- sbml_read(case$model)
-      "read"
-    },
-    zusbml_unsupported = function(cnd) cnd,
-    error = function(cnd) cnd
-  )
-  if (inherits(outcome, "zusbml_unsupported")) {
-    status <- if (case$category == "unsupported") "refused" else "fail"
-    return(result(status, conditionMessage(outcome)))
-  }
-  if (inherits(outcome, "condition")) {
-    status <- if (any(startsWith(class(outcome), "zusbml_"))) {
+  refused_or_failed <- function(cnd) {
+    status <- if (inherits(cnd, "zusbml_unsupported")) {
+      if (case$category == "unsupported") "refused" else "fail"
+    } else if (inherits(cnd, "zusbml_error")) {
       "fail"
     } else {
       "error"
     }
-    return(result(status, conditionMessage(outcome)))
+    result(status, conditionMessage(cnd))
+  }
+
+  model <- tryCatch(sbml_read(case$model), error = function(cnd) cnd)
+  if (inherits(model, "condition")) {
+    return(refused_or_failed(model))
   }
   drift <- suite_math_drift(model)
   if (length(drift) > 0) {
     return(result("fail", paste("MathML round trip changed:", drift[[1]])))
   }
-  if (suite_has("sbml_write")) {
-    written <- getExportedValue("zusbml", "sbml_write")(model)
-    back <- tryCatch(sbml_read(written), error = function(cnd) cnd)
-    if (inherits(back, "condition")) {
-      return(result("fail", paste("written document:", conditionMessage(back))))
-    }
-    if (!identical(back, model)) {
-      return(result("fail", "read, write, read changed the model"))
-    }
+  back <- tryCatch(sbml_read(sbml_write(model)), error = function(cnd) cnd)
+  if (inherits(back, "condition")) {
+    return(result("fail", paste("written document:", conditionMessage(back))))
   }
-  if (!suite_has("sbml_odes")) {
-    return(result(outcome))
+  if (!identical(back, model)) {
+    return(result("fail", "read, write, read changed the model"))
   }
-  eq <- tryCatch(
-    getExportedValue("zusbml", "sbml_odes")(model),
-    error = function(cnd) cnd
-  )
-  if (inherits(eq, "zusbml_unsupported")) {
-    status <- if (case$category == "unsupported") "refused" else "fail"
-    return(result(status, conditionMessage(eq)))
-  }
+  eq <- tryCatch(sbml_odes(model), error = function(cnd) cnd)
   if (inherits(eq, "condition")) {
-    status <- if (inherits(eq, "zusbml_error")) "fail" else "error"
-    return(result(status, conditionMessage(eq)))
+    return(refused_or_failed(eq))
   }
   if (case$category == "unsupported") {
     return(result("fail", "derived a model the suite marks unsupported"))
@@ -203,11 +176,7 @@ suite_run_case <- function(case) {
   if (inherits(actual, "condition")) {
     return(result("fail", paste("simulation:", conditionMessage(actual))))
   }
-  expected <- suite_read_results(case$results)
-  names(expected) <- trimws(names(expected))
-  # The first column is time, whatever it is called ("time", "Time"); a
-  # model may also have a variable named time.
-  names(expected)[[1]] <- ".time"
+  expected <- suite_expected(case)
   ok <- suite_compare(
     actual,
     expected,
@@ -218,6 +187,15 @@ suite_run_case <- function(case) {
     return(result("fail", "outside the tolerances"))
   }
   result("pass", level2 = suite_level2(case, expected))
+}
+
+# The case's results, with the first column, time, named ".time": results
+# files call it "time" or "Time", and a model may have a variable named time.
+suite_expected <- function(case) {
+  expected <- suite_read_results(case$results)
+  names(expected) <- trimws(names(expected))
+  names(expected)[[1]] <- ".time"
+  expected
 }
 
 # The case's Level 2 Version 5 file, when it has one, must simulate to the
@@ -231,7 +209,7 @@ suite_level2 <- function(case, expected) {
   outcome <- tryCatch(
     {
       model <- sbml_read(path)
-      eq <- getExportedValue("zusbml", "sbml_odes")(model)
+      eq <- sbml_odes(model)
       actual <- suite_simulate(model, eq, case$settings)
       suite_compare(
         actual,
@@ -258,7 +236,7 @@ suite_simulate <- function(model, eq, settings) {
   species <- eq$species
   compartments <- species$compartment[species$id %in% vars]
   outputs <- unique(c(vars, compartments))
-  f <- getExportedValue("zusbml", "sbml_derivs")(model, outputs)
+  f <- sbml_derivs(model, outputs = outputs)
   times <- seq(
     settings$start,
     settings$start + settings$duration,
@@ -363,8 +341,7 @@ suite_cases <- function(dir) {
   ids <- ids[file.exists(file.path(dir, ids, paste0(ids, "-sbml-l3v2.xml")))]
   # ZUSBML_SUITE_SKIP names cases a quick CI run leaves out (the workflow
   # skips 00966 on pull requests without the full-ci label).
-  skip <- strsplit(Sys.getenv("ZUSBML_SUITE_SKIP"), "[, ]+")[[1]]
-  ids <- setdiff(ids, skip)
+  ids <- setdiff(ids, suite_skip())
   shard <- suite_shard()
   if (shard[[2]] == 1) {
     return(ids)
@@ -415,8 +392,10 @@ suite_run <- function(dir) {
   # Seeded per case, so the stochastic cases (equal-priority events run in
   # random order) give the same result in every run and on any worker.
   run <- function(id) {
-    set.seed(as.integer(id))
-    as.data.frame(suite_run_case(suite_case(dir, id)))
+    withr::with_seed(
+      as.integer(id),
+      as.data.frame(suite_run_case(suite_case(dir, id)))
+    )
   }
   ids <- suite_cases(dir)
   cores <- as.integer(Sys.getenv("ZUSBML_SUITE_CORES", "1"))
@@ -438,8 +417,51 @@ suite_run <- function(dir) {
   do.call(rbind, rows)
 }
 
+# The cases ZUSBML_SUITE_SKIP leaves out.
+suite_skip <- function() {
+  skip <- strsplit(Sys.getenv("ZUSBML_SUITE_SKIP"), "[, ]+")[[1]]
+  skip[nzchar(skip)]
+}
+
+# The ways a report over the whole suite falls short of the floors, as
+# messages; none when it meets them. Skipped cases are supported ones, so
+# each lowers the read and pass floors by one. The test-suite workflow runs
+# this on the shards' reports combined, since one shard cannot check counts.
+suite_floor_failures <- function(
+  report,
+  floor = suite_floor(),
+  skipped = suite_skip()
+) {
+  counts <- c(
+    read = sum(report$status %in% c("read", "pass", "fail")),
+    pass = sum(report$status == "pass"),
+    refused = sum(report$status == "refused"),
+    level2 = sum(report$level2 == "pass")
+  )
+  wanted <- c(
+    read = floor$read - length(skipped),
+    pass = floor$pass - length(skipped),
+    refused = floor$refused,
+    level2 = floor$level2
+  )
+  short <- names(counts)[counts < wanted]
+  if (length(short) == 0) {
+    return(character(0))
+  }
+  paste0(short, ": ", counts[short], " below the floor of ", wanted[short])
+}
+
 # The committed minimum counts for the current stage; they only go up.
-suite_floor <- function() {
-  floor <- read.dcf(test_path("suite-floor.dcf"))[1, ]
+suite_floor <- function(path = test_path("suite-floor.dcf")) {
+  floor <- read.dcf(path)[1, ]
   as.list(stats::setNames(as.integer(floor), names(floor)))
+}
+
+# A copy of the fixture case in a temporary suite directory.
+copy_fixture <- function(dir, id = "00000") {
+  dir.create(file.path(dir, id))
+  from <- list.files(file.path(fixture_suite(), "00000"), full.names = TRUE)
+  to <- file.path(dir, id, sub("^00000", id, basename(from)))
+  file.copy(from, to)
+  invisible(file.path(dir, id))
 }
