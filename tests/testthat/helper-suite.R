@@ -166,7 +166,101 @@ suite_run_case <- function(case) {
   if (length(drift) > 0) {
     return(result("fail", paste("MathML round trip changed:", drift[[1]])))
   }
-  result(outcome)
+  if (!suite_has("sbml_odes")) {
+    return(result(outcome))
+  }
+  eq <- tryCatch(
+    getExportedValue("zusbml", "sbml_odes")(model),
+    error = function(cnd) cnd
+  )
+  if (inherits(eq, "zusbml_unsupported")) {
+    status <- if (case$category == "unsupported") "refused" else "fail"
+    return(result(status, conditionMessage(eq)))
+  }
+  if (inherits(eq, "condition")) {
+    status <- if (inherits(eq, "zusbml_error")) "fail" else "error"
+    return(result(status, conditionMessage(eq)))
+  }
+  if (case$category == "unsupported") {
+    return(result("fail", "derived a model the suite marks unsupported"))
+  }
+  # Solver failures are the case failing, not the harness erring.
+  actual <- tryCatch(
+    suite_simulate(eq, case$settings),
+    error = function(cnd) cnd
+  )
+  if (inherits(actual, "condition")) {
+    return(result("fail", paste("simulation:", conditionMessage(actual))))
+  }
+  expected <- suite_read_results(case$results)
+  names(expected) <- trimws(names(expected))
+  # The first column is time, whatever it is called ("time", "Time"); a
+  # model may also have a variable named time.
+  names(expected)[[1]] <- ".time"
+  ok <- suite_compare(
+    actual,
+    expected,
+    absolute = case$settings$absolute,
+    relative = case$settings$relative
+  )
+  if (ok) result("pass") else result("fail", "outside the tolerances")
+}
+
+# Simulate derived equations on the case's time grid with deSolve, and
+# report each variable as the amount or concentration the settings ask for.
+suite_simulate <- function(eq, settings) {
+  derivs_function <- utils::getFromNamespace("derivs_function", "zusbml")
+  vars <- settings$variables
+  species <- eq$species
+  compartments <- species$compartment[species$id %in% vars]
+  outputs <- unique(c(vars, compartments))
+  f <- derivs_function(eq, outputs)
+  times <- seq(
+    settings$start,
+    settings$start + settings$duration,
+    length.out = settings$steps + 1
+  )
+  if (nrow(eq$states) == 0) {
+    values <- matrix(
+      vapply(
+        times,
+        function(t) f(t, numeric(0), eq$constants)[[2]],
+        numeric(length(outputs))
+      ),
+      ncol = length(outputs),
+      byrow = TRUE,
+      dimnames = list(NULL, outputs)
+    )
+  } else {
+    sim <- deSolve::ode(
+      y = eq$initial,
+      times = times,
+      func = f,
+      parms = eq$constants,
+      method = "lsoda",
+      rtol = 1e-10,
+      atol = 1e-12
+    )
+    if (nrow(sim) != length(times)) {
+      stop("the solver stopped at time ", sim[nrow(sim), 1])
+    }
+    values <- sim[, outputs, drop = FALSE]
+  }
+  out <- data.frame(.time = times)
+  for (v in vars) {
+    value <- values[, v]
+    row <- species[species$id == v, ]
+    if (nrow(row) == 1) {
+      size <- values[, row$compartment]
+      if (v %in% settings$amount && !row$is_amount) {
+        value <- value * size
+      } else if (v %in% settings$concentration && row$is_amount) {
+        value <- value / size
+      }
+    }
+    out[[v]] <- value
+  }
+  out
 }
 
 # Every expression in a model.
@@ -198,10 +292,12 @@ suite_model_math <- function(m) {
 suite_math_drift <- function(m) {
   r_to_mathml <- utils::getFromNamespace("r_to_mathml", "zusbml")
   mathml_to_r <- utils::getFromNamespace("mathml_to_r", "zusbml")
+  model_ids <- utils::getFromNamespace("model_ids", "zusbml")
+  ids <- model_ids(m)
   drift <- character(0)
   for (expr in suite_model_math(m)) {
-    text <- r_to_mathml(expr)
-    back <- mathml_to_r(zuxml::xml_root(zuxml::xml_parse(text)))
+    text <- r_to_mathml(expr, ids)
+    back <- mathml_to_r(zuxml::xml_root(zuxml::xml_parse(text)), ids = ids)
     if (!identical(back, expr)) {
       drift <- c(drift, paste(deparse(expr), collapse = " "))
     }

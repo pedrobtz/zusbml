@@ -100,6 +100,11 @@ validation). Built so far:
   table (`math_ops`) drives both directions; `math_env` defines the
   operators kept under their SBML names (design D15). The Test Suite runner
   checks that every expression survives R -> MathML -> R unchanged.
+- [R/derive.R](R/derive.R) is `sbml_odes()`: it gives every symbol one role
+  (constant, assignment or state), builds right-hand sides from reactions
+  and rate rules, orders assignments by dependency, and solves time 0 as
+  one system of initial assignments, assignment rules and defaults.
+  `derivs_function()` compiles the result into a `function(.t, .y, .p)`.
 - [R/model.R](R/model.R) builds the `sbml_model`: one data frame per element
   kind, list columns for math and nested parts, accessors and printing.
 - [R/conditions.R](R/conditions.R) builds the classed conditions of design
@@ -128,6 +133,10 @@ These are fixed by the design before any code exists.
   Suite case must pass again after a write and re-read.
 - **One operator table drives MathML in both directions** (§6.2). Adding a
   mapping on one side only breaks the round trip.
+- **Internal names start with "."** (`.amount.S1`, `.local.r1.k`, `.time`,
+  the `.t`, `.y`, `.p` arguments). SBML ids cannot contain ".", so these never
+  collide with model symbols. Test Suite cases name symbols `time`, `pi` and
+  `y`; a bare name of that kind broke derivation before (design D16).
 - **The Test Suite pass count only goes up.** Stage 0 records the supported
   tags and the expected count per stage.
 

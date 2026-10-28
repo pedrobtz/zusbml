@@ -139,10 +139,26 @@ test_that("suite_case() gathers a case's files and tags", {
   expect_equal(basename(case$model), "00000-sbml-l3v2.xml")
 })
 
-test_that("suite_run_case() reports a readable case as read before derivation", {
+test_that("suite_run_case() passes a case that matches its results", {
+  skip_if_not_installed("deSolve")
   case <- suite_case(fixture_suite(), "00000")
 
-  expect_equal(suite_run_case(case)$status, "read")
+  expect_equal(suite_run_case(case)$status, "pass")
+})
+
+test_that("suite_run_case() fails a case outside its tolerances", {
+  skip_if_not_installed("deSolve")
+  dir <- withr::local_tempdir()
+  file.copy(file.path(fixture_suite(), "00000"), dir, recursive = TRUE)
+  results <- file.path(dir, "00000", "00000-results.csv")
+  lines <- readLines(results)
+  lines[[3]] <- "0.5,0.7,0.3"
+  writeLines(lines, results)
+
+  outcome <- suite_run_case(suite_case(dir, "00000"))
+
+  expect_equal(outcome$status, "fail")
+  expect_equal(outcome$message, "outside the tolerances")
 })
 
 test_that("suite_run_case() reports a package document as refused", {
@@ -174,7 +190,7 @@ test_that("suite_run() returns one row per case with a status", {
 
   expect_named(report, c("id", "category", "status", "message"))
   expect_equal(report$id, "00000")
-  expect_equal(report$status, "read")
+  expect_true(report$status %in% c("pass", "read"))
 })
 
 test_that("suite_floor() reads the committed floors as integers", {

@@ -48,6 +48,7 @@ sbml_read <- function(x, ignore_packages = FALSE) {
 
   root <- zuxml::xml_root(doc)
   read_level(root, ctx)
+  ctx$ids <- document_ids(doc)
   sbml <- read_element(root, "sbml", "sbml", ctx)
   check_level_attributes(sbml, ctx)
   if (is.null(sbml$children$model)) {
@@ -59,6 +60,16 @@ sbml_read <- function(x, ignore_packages = FALSE) {
     )
   }
   new_sbml_model(sbml, ctx)
+}
+
+# Every id the document declares, so math can tell the time csymbol and
+# <pi/> from model symbols of those names (design D16).
+document_ids <- function(doc) {
+  ids <- c(
+    zuxml::xml_attr(zuxml::xml_root(doc), "id", ns = NA),
+    zuxml::xml_attr(zuxml::xml_find(doc), "id", ns = NA)
+  )
+  unique(ids[!is.na(ids)])
 }
 
 read_input <- function(x) {
@@ -253,7 +264,7 @@ read_element <- function(node, kind, path, ctx) {
 
 read_child <- function(node, local, path, ctx) {
   if (local == "math") {
-    return(list(mathml_to_r(node, path, ctx$file)))
+    return(list(mathml_to_r(node, path, ctx$file, ctx$ids)))
   }
   if (local == "message") {
     return(zuxml::xml_serialize(node))
