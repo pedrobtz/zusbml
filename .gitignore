@@ -52,3 +52,7 @@ CRAN-SUBMISSION
 
 # Claude Code local settings
 .claude/settings.local.json
+
+# SBML Test Suite, downloaded by tools/fetch-test-suite.sh (LGPL 2.1;
+# never committed, design D5)
+/sbml-test-suite/

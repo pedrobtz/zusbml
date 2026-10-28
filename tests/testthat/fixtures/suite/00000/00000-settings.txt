@@ -1,0 +1,8 @@
+start: 0
+duration: 2
+steps: 4
+variables: S1, S2
+absolute: 1e-6
+relative: 1e-4
+amount: S1
+concentration: S2
