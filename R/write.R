@@ -53,9 +53,15 @@ sbml_write <- function(m, path = NULL) {
 
 # ---- Text building ---------------------------------------------------------
 
+# Attribute values escaped for a double-quoted attribute. Tab, newline and
+# carriage return become character references, which attribute value
+# normalisation would otherwise turn into spaces.
 attr_escape <- function(x) {
   x <- xml_escape(x)
-  gsub('"', "&quot;", x, fixed = TRUE)
+  x <- gsub('"', "&quot;", x, fixed = TRUE)
+  x <- gsub("\t", "&#9;", x)
+  x <- gsub("\n", "&#10;", x)
+  gsub("\r", "&#13;", x)
 }
 
 # Attribute values as text: NA is left out, logicals are true/false,
@@ -112,10 +118,33 @@ sbase_attrs <- function(row) {
 
 # notes and annotation are stored without their own tag (xml_content()).
 sbase_children <- function(row) {
-  wrap <- function(tag, x) {
-    if (!is.null(x) && !is.na(x)) paste0("<", tag, ">", x, "</", tag, ">")
+  c(
+    wrap_content("notes", row$notes),
+    wrap_content("annotation", row$annotation)
+  )
+}
+
+# XML content kept as text (notes, annotation, a constraint's message),
+# wrapped in its tag. It may have been edited, so it is checked to be a
+# well-formed fragment before it goes into the document.
+wrap_content <- function(tag, x) {
+  if (is.null(x) || is.na(x)) {
+    return(NULL)
   }
-  c(wrap("notes", row$notes), wrap("annotation", row$annotation))
+  well_formed <- tryCatch(
+    {
+      zuxml::xml_parse(paste0("<x>", x, "</x>"))
+      TRUE
+    },
+    zuxml_error = function(cnd) FALSE
+  )
+  if (!well_formed) {
+    abort_write(
+      paste0("The ", tag, " text is not well-formed XML."),
+      tag
+    )
+  }
+  paste0("<", tag, ">", x, "</", tag, ">")
 }
 
 math_child <- function(expr, ids) {
@@ -291,7 +320,7 @@ write_model <- function(m, ids) {
           ),
           sbase_children(r),
           math_child(r$math, ids),
-          if (!is.na(r$message)) paste0("<message>", r$message, "</message>")
+          wrap_content("message", r$message)
         )
       })
     ),

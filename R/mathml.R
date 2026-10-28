@@ -840,6 +840,9 @@ r_lambda <- function(expr) {
 # Shortest decimal text that reads back as the same double, at most 17
 # significant digits; exponents are written as e-notation.
 r_number <- function(x) {
+  if (is.na(x) && !is.nan(x)) {
+    abort_write("NA has no MathML equivalent.", "NA")
+  }
   if (is.nan(x)) {
     return(tag("notanumber"))
   }
@@ -871,7 +874,15 @@ format_double <- function(x) {
   text
 }
 
+# Text escaped for XML. Characters XML 1.0 does not allow at all (most
+# control characters) cannot be written.
 xml_escape <- function(x) {
+  if (any(grepl("[\x01-\x08\x0B\x0C\x0E-\x1F]", x, perl = TRUE))) {
+    abort_write(
+      "Text with a control character cannot be written as XML 1.0.",
+      "text"
+    )
+  }
   x <- gsub("&", "&amp;", x, fixed = TRUE)
   x <- gsub("<", "&lt;", x, fixed = TRUE)
   gsub(">", "&gt;", x, fixed = TRUE)

@@ -122,3 +122,42 @@ test_that("math with no MathML equivalent is a write error", {
 test_that("sbml_write() refuses anything but a model", {
   expect_error(sbml_write(list()))
 })
+
+test_that("tabs and newlines in attribute values survive a round trip", {
+  m <- sbml_read(model_doc(
+    parameters = '<parameter id="p" name="a&#10;b&#9;c&#13;d" constant="true"/>'
+  ))
+
+  expect_equal(sbml_parameters(m)$name, "a\nb\tc\rd")
+  expect_identical(sbml_read(sbml_write(m)), m)
+})
+
+test_that("quotes, ampersands and angle brackets in names are escaped", {
+  m <- sbml_read(model_doc(
+    parameters = '<parameter id="p" name="&quot;a&quot; &amp; &lt;b&gt;" constant="true"/>'
+  ))
+
+  expect_identical(sbml_read(sbml_write(m)), m)
+})
+
+test_that("text that is not well-formed XML is a write error", {
+  m <- sbml_read(model_doc(parameters = par("p", 1)))
+  m$notes <- "a < b"
+
+  err <- expect_error(sbml_write(m), class = "zusbml_write_error")
+  expect_equal(err$construct, "notes")
+})
+
+test_that("control characters are a write error", {
+  m <- sbml_read(model_doc(parameters = par("p", 1)))
+  m$parameters$name <- "a\001b"
+
+  expect_error(sbml_write(m), class = "zusbml_write_error")
+})
+
+test_that("NA math is a write error", {
+  r_to_mathml <- utils::getFromNamespace("r_to_mathml", "zusbml")
+
+  err <- expect_error(r_to_mathml(NA_real_), class = "zusbml_write_error")
+  expect_equal(err$construct, "NA")
+})
