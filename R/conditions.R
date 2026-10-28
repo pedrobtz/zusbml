@@ -47,3 +47,8 @@ abort_unsupported <- function(
     section = section
   )
 }
+
+# A bad argument to an exported function.
+abort_arg <- function(message, argument) {
+  zusbml_abort("zusbml_arg_error", message, argument = argument)
+}

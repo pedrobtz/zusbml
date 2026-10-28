@@ -28,6 +28,10 @@
   time, events at time 0). All 1,384 supported SBML Test Suite cases
   reproduce their reference results.
 
+* `sbml_derivs(parms =)` takes constants to use instead of the model's
+  values; initial assignments and events at time 0 follow them in `y0`, and
+  the event engine uses the `parms` the solver passes.
+
 * `sbml_to_rxode2()` writes the equations of a model as rxode2 model text;
   events are refused, or left out with `events = "drop"`.
 

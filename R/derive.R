@@ -54,6 +54,13 @@
 #' eq$rhs
 #' sbml_initial_state(m)
 sbml_odes <- function(m) {
+  derive_odes(m)
+}
+
+# sbml_odes() with `overrides`, a named numeric vector of constants to use
+# instead of the model's values: they enter the time 0 solve, so initial
+# assignments that depend on them follow (sbml_derivs(parms =)).
+derive_odes <- function(m, overrides = NULL) {
   check_model(m)
   refuse_underivable(m)
   # A Level 3 Version 2 rule without math has no effect (section 4.9).
@@ -80,7 +87,18 @@ sbml_odes <- function(m) {
   assignments <- sort_definitions(assignments, "assignment rules")
 
   refuse_unknown_names(m, roles, rhs, assignments)
-  values <- initial_values(m, symbols, roles, rhs, assignments)
+  unknown <- setdiff(names(overrides), roles$name[roles$role == "constant"])
+  if (length(unknown) > 0) {
+    abort_arg(
+      paste0(
+        "`parms` names ",
+        paste0("'", unknown, "'", collapse = ", "),
+        ", which are not constants of the model."
+      ),
+      "parms"
+    )
+  }
+  values <- initial_values(m, symbols, roles, rhs, assignments, overrides)
   constant_ids <- roles$name[roles$role == "constant"]
   states <- roles[roles$role == "state", c("name", "symbol", "kind")]
   rownames(states) <- NULL
@@ -730,7 +748,14 @@ sort_definitions <- function(defs, what) {
 # Every symbol's value at time 0. Initial assignments and assignment rules
 # hold at time 0 together (section 4.8), so they, the reaction rates and the
 # defaults are solved as one system in dependency order.
-initial_values <- function(m, symbols, roles, rhs, assignments) {
+initial_values <- function(
+  m,
+  symbols,
+  roles,
+  rhs,
+  assignments,
+  overrides = NULL
+) {
   defs <- stats::setNames(symbols$default, symbols$id)
   for (r in seq_len(nrow(m$reactions))) {
     params <- m$reactions$kinetic_law[[r]]$local_parameters
@@ -762,6 +787,10 @@ initial_values <- function(m, symbols, roles, rhs, assignments) {
     id <- sub("^\\.amount\\.", "", name)
     compartment <- m$species$compartment[m$species$id == id]
     defs[[name]] <- call("*", as.name(id), as.name(compartment))
+  }
+
+  for (name in names(overrides)) {
+    defs[[name]] <- overrides[[name]]
   }
 
   defs <- sort_definitions(defs, "initial values")
