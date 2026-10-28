@@ -2,3 +2,29 @@ url: https://pedrobtz.github.io/zusbml/
 template:
   bootstrap: 5
 
+reference:
+  - title: Read and write
+    contents:
+      - sbml_read
+      - sbml_write
+      - sbml_write_json
+  - title: Model contents
+    contents:
+      - sbml_components
+      - sbml_math
+      - sbml_check
+  - title: Equations
+    contents:
+      - sbml_odes
+      - sbml_derivs
+      - sbml_to_rxode2
+  - title: Package
+    contents:
+      - zusbml-package
+      - zusbml_info
+
+articles:
+  - title: Articles
+    navbar: ~
+    contents:
+      - articles/zusbml

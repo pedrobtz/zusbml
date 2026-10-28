@@ -39,4 +39,8 @@
   references, symbols set twice, rules or events on constants, assignment
   cycles) as a data frame.
 
+* A README, the article "Simulating SBML models", and a scope section in
+  `?zusbml`; `inst/extdata/dosing.xml` is a bundled example model with an
+  event.
+
 * `zusbml_info()` reports what the package reads and writes.
