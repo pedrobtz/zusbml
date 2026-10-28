@@ -85,8 +85,11 @@ The SBML Test Suite oracle, occasional (CI runs it on every push):
 
 ``` sh
 tools/fetch-test-suite.sh                        # into sbml-test-suite/
-ZUSBML_TEST_SUITE=$PWD/sbml-test-suite \
+ZUSBML_TEST_SUITE=$PWD/sbml-test-suite ZUSBML_SUITE_CORES=4 \
   Rscript -e 'devtools::test(filter = "^suite$")'
+tools/fetch-biomodels.sh                         # the 50 fixed models
+ZUSBML_BIOMODELS=$PWD/biomodels \
+  Rscript -e 'devtools::test(filter = "biomodels")'
 ```
 
 ## Architecture
@@ -132,6 +135,11 @@ semantics, validation). Built so far:
 - [R/check.R](https://pedrobtz.github.io/zusbml/R/check.R) is
   [`sbml_check()`](https://pedrobtz.github.io/zusbml/reference/sbml_check.md):
   structural findings as a data frame, never an error.
+- [R/level2.R](https://pedrobtz.github.io/zusbml/R/level2.R) turns a
+  parsed Level 2 Version 4 or 5 model into the Level 3 shape before the
+  tables are built (design D18); the Level 2 element table is
+  `level2_overrides` in
+  [R/spec.R](https://pedrobtz.github.io/zusbml/R/spec.R).
 - [R/model.R](https://pedrobtz.github.io/zusbml/R/model.R) builds the
   `sbml_model`: one data frame per element kind, list columns for math
   and nested parts, accessors and printing.

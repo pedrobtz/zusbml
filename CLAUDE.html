@@ -79,8 +79,11 @@
 <span id="cb1-7"><a href="#cb1-7" tabindex="-1"></a><span class="ex">air</span> format .                                     <span class="co"># format R sources</span></span></code></pre></div>
 <p>The SBML Test Suite oracle, occasional (CI runs it on every push):</p>
 <div class="sourceCode" id="cb2"><pre class="sourceCode sh"><code class="sourceCode bash"><span id="cb2-1"><a href="#cb2-1" tabindex="-1"></a><span class="ex">tools/fetch-test-suite.sh</span>                        <span class="co"># into sbml-test-suite/</span></span>
-<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="va">ZUSBML_TEST_SUITE</span><span class="op">=</span><span class="va">$PWD</span>/sbml-test-suite <span class="dt">\</span></span>
-<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "^suite$")'</span></span></code></pre></div>
+<span id="cb2-2"><a href="#cb2-2" tabindex="-1"></a><span class="va">ZUSBML_TEST_SUITE</span><span class="op">=</span><span class="va">$PWD</span>/sbml-test-suite <span class="va">ZUSBML_SUITE_CORES</span><span class="op">=</span>4 <span class="dt">\</span></span>
+<span id="cb2-3"><a href="#cb2-3" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "^suite$")'</span></span>
+<span id="cb2-4"><a href="#cb2-4" tabindex="-1"></a><span class="ex">tools/fetch-biomodels.sh</span>                         <span class="co"># the 50 fixed models</span></span>
+<span id="cb2-5"><a href="#cb2-5" tabindex="-1"></a><span class="va">ZUSBML_BIOMODELS</span><span class="op">=</span><span class="va">$PWD</span>/biomodels <span class="dt">\</span></span>
+<span id="cb2-6"><a href="#cb2-6" tabindex="-1"></a>  <span class="ex">Rscript</span> <span class="at">-e</span> <span class="st">'devtools::test(filter = "biomodels")'</span></span></code></pre></div>
 </div>
 <div class="section level2">
 <h2 id="architecture">Architecture<a class="anchor" aria-label="anchor" href="#architecture"></a></h2>
@@ -101,6 +104,8 @@
 <a href="R/write.R">R/write.R</a> writes Level 3 Version 2 as text (<code>zuxml</code> cannot build nodes); the Test Suite runner requires read, write, read to give an identical model. <code><a href="reference/sbml_write_json.html">sbml_write_json()</a></code> goes through <code>zujson</code>.</li>
 <li>
 <a href="R/check.R">R/check.R</a> is <code><a href="reference/sbml_check.html">sbml_check()</a></code>: structural findings as a data frame, never an error.</li>
+<li>
+<a href="R/level2.R">R/level2.R</a> turns a parsed Level 2 Version 4 or 5 model into the Level 3 shape before the tables are built (design D18); the Level 2 element table is <code>level2_overrides</code> in <a href="R/spec.R">R/spec.R</a>.</li>
 <li>
 <a href="R/model.R">R/model.R</a> builds the <code>sbml_model</code>: one data frame per element kind, list columns for math and nested parts, accessors and printing.</li>
 <li>
