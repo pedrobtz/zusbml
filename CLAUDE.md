@@ -81,7 +81,7 @@ The SBML Test Suite oracle, occasional (CI runs it on every push):
 ```sh
 tools/fetch-test-suite.sh                        # into sbml-test-suite/
 ZUSBML_TEST_SUITE=$PWD/sbml-test-suite ZUSBML_SUITE_CORES=4 \
-  Rscript -e 'devtools::test(filter = "^suite$")'
+  Rscript -e 'devtools::test(filter = "^suite$")'   # add ZUSBML_SUITE_SHARD=1/2 for half
 tools/fetch-biomodels.sh                         # the 50 fixed models
 ZUSBML_BIOMODELS=$PWD/biomodels \
   Rscript -e 'devtools::test(filter = "biomodels")'

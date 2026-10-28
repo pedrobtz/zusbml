@@ -17,12 +17,19 @@ concurrency:
 jobs:
   test-suite:
     runs-on: ubuntu-latest
+    name: test-suite (${{ matrix.shard }})
+    # Two shards keep each job under five minutes.
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: ["1/2", "2/2"]
     env:
       GITHUB_PAT: ${{ secrets.GITHUB_TOKEN }}
       ZUSBML_TEST_SUITE: ${{ github.workspace }}/sbml-test-suite
       ZUSBML_REQUIRE_SUITE: "true"
       ZUSBML_SUITE_REPORT: ${{ github.workspace }}/suite-report.csv
       ZUSBML_SUITE_CORES: "4"
+      ZUSBML_SUITE_SHARD: ${{ matrix.shard }}
     steps:
       - uses: actions/checkout@v6
 
@@ -49,7 +56,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: suite-report
+          name: suite-report-${{ strategy.job-index }}
           path: suite-report.csv
           if-no-files-found: ignore
 

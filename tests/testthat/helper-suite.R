@@ -351,9 +351,18 @@ suite_math_drift <- function(m) {
   drift
 }
 
+# ZUSBML_SUITE_SHARD="i/n" keeps every n-th case starting at the i-th, so
+# CI can split the suite across jobs.
 suite_cases <- function(dir) {
   ids <- list.files(dir, pattern = "^[0-9]{5}$")
-  ids[file.exists(file.path(dir, ids, paste0(ids, "-sbml-l3v2.xml")))]
+  ids <- ids[file.exists(file.path(dir, ids, paste0(ids, "-sbml-l3v2.xml")))]
+  shard <- suite_shard()
+  ids[seq_along(ids) %% shard[[2]] == shard[[1]] %% shard[[2]]]
+}
+
+suite_shard <- function() {
+  shard <- Sys.getenv("ZUSBML_SUITE_SHARD", "1/1")
+  as.integer(strsplit(shard, "/", fixed = TRUE)[[1]])
 }
 
 # Cases run in parallel on ZUSBML_SUITE_CORES cores (default 1, as
