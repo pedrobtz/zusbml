@@ -299,8 +299,8 @@ test_that("a parse error in nested math names its full path", {
   bad <- "<ci>.x</ci>"
   rule_path <- "sbml/model/listOfRules/assignmentRule[1]/math/"
   cases <- list(
-    "apply[3]/ci" = paste0("<apply><plus/><cn>1</cn>", bad, "</apply>"),
-    "apply[3]/apply[3]/ci" = paste0(
+    "apply/ci[2]" = paste0("<apply><plus/><ci>p</ci>", bad, "</apply>"),
+    "apply/apply/ci" = paste0(
       "<apply><plus/><cn>1</cn><apply><times/><cn>2</cn>",
       bad,
       "</apply></apply>"
@@ -353,6 +353,74 @@ test_that("a parse error in nested math names its full path", {
   err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
   expect_equal(
     err$path,
-    "sbml/model/listOfFunctionDefinitions/functionDefinition[1]/math/lambda/body/apply[3]/ci"
+    "sbml/model/listOfFunctionDefinitions/functionDefinition[1]/math/lambda/apply/ci[2]"
   )
+})
+
+test_that("a bound variable's error names the bvar", {
+  doc <- model_doc(
+    functions = paste0(
+      '<functionDefinition id="f"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      "<lambda><bvar><ci>x</ci></bvar><bvar><ci>.y</ci></bvar>",
+      "<ci>x</ci></lambda></math></functionDefinition>"
+    )
+  )
+
+  err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
+  expect_match(err$path, "/math/lambda/bvar\\[2\\]/ci$")
+})
+
+test_that("text without an element inside <math> is a parse error", {
+  doc <- model_doc(
+    parameters = par("p", constant = FALSE),
+    rules = paste0(
+      '<assignmentRule variable="p">',
+      '<math xmlns="http://www.w3.org/1998/Math/MathML"> oops </math>',
+      "</assignmentRule>"
+    )
+  )
+
+  err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
+  expect_match(err$path, "assignmentRule\\[1\\]/math$")
+  blank <- sub(" oops ", "  ", doc, fixed = TRUE)
+  expect_null(sbml_rules(sbml_read(blank))$math[[1]])
+})
+
+test_that("an apply head outside MathML is refused even if named ci", {
+  for (head in c("ci", "csymbol")) {
+    expect_error(
+      from_mathml(paste0(
+        '<apply><x:',
+        head,
+        ' xmlns:x="urn:x">f</x:',
+        head,
+        '><cn>1</cn></apply>'
+      )),
+      class = "zusbml_parse_error",
+      info = head
+    )
+  }
+})
+
+test_that("<cn> holds only numbers and <sep/>", {
+  expect_error(
+    from_mathml('<cn type="rational">1<apply/>2</cn>'),
+    class = "zusbml_parse_error"
+  )
+  expect_error(
+    from_mathml('<cn type="rational">1<x:sep xmlns:x="urn:x"/>2</cn>'),
+    class = "zusbml_parse_error"
+  )
+  expect_equal(from_mathml('<cn type="rational">1<sep/>2</cn>'), 0.5)
+})
+
+test_that("an integer <cn> must hold an integer", {
+  expect_identical(from_mathml('<cn type="integer"> -3 </cn>'), -3)
+  for (bad in c("1.5", "1e3", "INF")) {
+    expect_error(
+      from_mathml(paste0('<cn type="integer">', bad, "</cn>")),
+      class = "zusbml_parse_error",
+      info = bad
+    )
+  }
 })
