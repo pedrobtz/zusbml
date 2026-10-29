@@ -51,12 +51,21 @@ test_that("sbml_read() reports malformed XML as a parse error", {
   expect_error(sbml_read("<sbml><model></sbml>"), class = "zusbml_parse_error")
 })
 
-test_that("sbml_read() rejects a root that is not SBML", {
+test_that("sbml_read() rejects an <sbml> root outside the SBML namespaces", {
   err <- expect_error(
     sbml_read('<sbml xmlns="urn:other" level="3" version="2"/>'),
     class = "zusbml_parse_error"
   )
   expect_equal(err$section, "4.1")
+})
+
+test_that("sbml_read() rejects a root that is not <sbml>", {
+  err <- expect_error(
+    sbml_read('<model xmlns="http://www.sbml.org/sbml/level3/version2/core"/>'),
+    class = "zusbml_parse_error"
+  )
+  expect_equal(err$section, "4.1")
+  expect_equal(err$path, "model")
 })
 
 test_that("sbml_read() requires a model", {
@@ -192,18 +201,25 @@ test_that("ignore_packages = TRUE reads the core and records what was dropped", 
   expect_equal(sbml_species(m)$id, "S")
 })
 
-test_that("sbml_read() checks its arguments", {
+test_that("sbml_read() refuses an `x` that is not a document", {
   err <- expect_error(sbml_read(1), class = "zusbml_arg_error")
   expect_equal(err$argument, "x")
+})
+
+test_that("sbml_read() refuses an `ignore_packages` that is not a flag", {
   err <- expect_error(
     sbml_read(sbml_doc(), ignore_packages = NA),
     class = "zusbml_arg_error"
   )
   expect_equal(err$argument, "ignore_packages")
-  expect_error(
+})
+
+test_that("sbml_read() refuses a file that does not exist", {
+  err <- expect_error(
     sbml_read(file.path(withr::local_tempdir(), "missing.xml")),
     class = "zusbml_arg_error"
   )
+  expect_equal(err$argument, "x")
 })
 
 test_that("sbml_read() keeps notes and annotation as XML text", {
@@ -262,6 +278,53 @@ test_that("only listOfFunctionDefinitions declares functions math may call", {
 
   err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
   expect_match(err$path, "assignmentRule\\[1\\]/math/apply$")
+})
+
+test_that("a list skips its notes, annotation and ignored package elements", {
+  fbc <- ' xmlns:fbc="http://www.sbml.org/sbml/level3/version1/fbc/version2"'
+  doc <- sbml_doc(
+    paste0(
+      "<listOfParameters>",
+      '<notes><p xmlns="http://www.w3.org/1999/xhtml">n</p></notes>',
+      '<annotation><x xmlns="urn:x"/></annotation>',
+      par_xml("a", 1),
+      "<fbc:objective/>",
+      par_xml("b", 2),
+      "<fbc:objective/>",
+      par_xml("c", 3),
+      "</listOfParameters>"
+    ),
+    version = 1,
+    sbml_attrs = paste0(fbc, ' fbc:required="false"')
+  )
+
+  m <- sbml_read(doc, ignore_packages = TRUE)
+
+  expect_equal(sbml_parameters(m)$id, c("a", "b", "c"))
+  expect_equal(sbml_parameters(m)$value, c(1, 2, 3))
+  expect_equal(m$ignored_packages, "fbc")
+  err <- expect_error(sbml_read(doc), class = "zusbml_unsupported")
+  expect_equal(err$package, "fbc")
+})
+
+test_that("a child element in no namespace is a parse error", {
+  doc <- model_doc(
+    species = sp_xml("A", amount = 1),
+    reactions = sub(
+      "<kineticLaw>",
+      '<kineticLaw xmlns="">',
+      rxn("r", 1),
+      fixed = TRUE
+    )
+  )
+
+  for (ignore in c(FALSE, TRUE)) {
+    err <- expect_error(
+      sbml_read(doc, ignore_packages = ignore),
+      class = "zusbml_parse_error"
+    )
+    expect_equal(err$path, "sbml/model/listOfReactions/reaction[1]/kineticLaw")
+  }
 })
 
 test_that("an element in no namespace inside a list is a parse error", {

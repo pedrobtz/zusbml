@@ -32,6 +32,38 @@ test_that("references that do not resolve are found", {
   expect_setequal(found$id, c("D", "B", "k"))
 })
 
+test_that("a modifier that is not a species is found", {
+  m <- sbml_read(model_doc(
+    species = sp_xml("A", amount = 1),
+    reactions = sub(
+      "<kineticLaw>",
+      paste0(
+        '<listOfModifiers><modifierSpeciesReference species="M"/>',
+        "</listOfModifiers><kineticLaw>"
+      ),
+      rxn("r", 1, reactants = "A"),
+      fixed = TRUE
+    )
+  ))
+
+  found <- sbml_check(m)
+
+  expect_equal(found$rule, "unknown_reference")
+  expect_equal(found$id, "M")
+})
+
+test_that("two rules on one variable are found", {
+  m <- sbml_read(model_doc(
+    parameters = par_xml("p", 1, constant = FALSE),
+    rules = paste0(rule("assignment", "p", 3), rule("rate", "p", 1))
+  ))
+
+  found <- sbml_check(m)
+
+  expect_equal(found$rule, "multiple_definitions")
+  expect_equal(found$id, "p")
+})
+
 test_that("local parameters and bound variables are known in their math", {
   m <- sbml_read(model_doc(
     functions = paste0(

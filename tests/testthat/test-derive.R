@@ -52,6 +52,27 @@ test_that("a species in a compartment that changes size is integrated as an amou
   expect_equal(eq$initial[[".amount.A"]], 6)
 })
 
+test_that("initialConcentration of an amount species is multiplied by the size", {
+  eq <- odes(species = sp_xml("A", conc = 3, only_substance = TRUE))
+
+  expect_equal(eq$initial, c(A = 6))
+})
+
+test_that("a rate-ruled concentration in a changing compartment uses the product rule", {
+  eq <- odes(
+    compartments = '<compartment id="C" size="2" constant="false"/>',
+    species = sp_xml("S", conc = 3),
+    parameters = par_xml("k", 0.5),
+    rules = paste0(rule("rate", "C", 0.25), rule("rate", "S", quote(k)))
+  )
+
+  expect_equal(eq$states$name, c("C", ".amount.S"))
+  # d(S * C)/dt = dS/dt * C + S * dC/dt, with rateOf(C) replaced by 0.25.
+  expect_identical(eq$rhs[[".amount.S"]], quote(k * C + S * 0.25))
+  expect_identical(eq$assignments$S, quote(.amount.S / C))
+  expect_equal(eq$initial, c(C = 2, .amount.S = 6))
+})
+
 test_that("a constant species in a growing compartment keeps its amount", {
   eq <- odes(
     compartments = '<compartment id="C" size="2" constant="false"/>',
@@ -287,29 +308,38 @@ test_that("a reaction without a kinetic law is a derive error", {
   expect_equal(err$ids, "r")
 })
 
-test_that("algebraic rules, delay and fast reactions are refused", {
-  algebraic <- model_doc(
+test_that("an algebraic rule is refused", {
+  m <- sbml_read(model_doc(
     parameters = par_xml("p", 1, constant = FALSE),
     rules = paste0("<algebraicRule>", mml(quote(p - 1)), "</algebraicRule>")
-  )
-  delay <- model_doc(
+  ))
+
+  err <- expect_error(sbml_odes(m), class = "zusbml_unsupported")
+  expect_equal(err$construct, "algebraicRule")
+  expect_equal(err$section, "4.9.2")
+})
+
+test_that("the delay csymbol is refused, naming where it is used", {
+  m <- sbml_read(model_doc(
     parameters = paste0(par_xml("p", 1, constant = FALSE), par_xml("q", 1)),
     rules = rule("assignment", "p", quote(delay(q, 1)))
-  )
-  fast <- model_doc(
+  ))
+
+  err <- expect_error(sbml_odes(m), class = "zusbml_unsupported")
+  expect_equal(err$construct, "delay")
+  expect_equal(err$id, "p")
+  expect_equal(err$section, "3.4.6")
+})
+
+test_that("a fast reaction is refused", {
+  m <- sbml_read(model_doc(
     species = sp_xml("A", amount = 1),
     reactions = '<reaction id="r" reversible="false" fast="true"/>',
     version = 1
-  )
+  ))
 
-  err <- expect_error(
-    sbml_odes(sbml_read(algebraic)),
-    class = "zusbml_unsupported"
-  )
-  expect_equal(err$construct, "algebraicRule")
-  err <- expect_error(sbml_odes(sbml_read(delay)), class = "zusbml_unsupported")
-  expect_equal(err$construct, "delay")
-  err <- expect_error(sbml_odes(sbml_read(fast)), class = "zusbml_unsupported")
+  err <- expect_error(sbml_odes(m), class = "zusbml_unsupported")
+  expect_equal(err$construct, "fast reaction")
   expect_equal(err$id, "r")
 })
 
