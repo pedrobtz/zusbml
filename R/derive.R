@@ -552,11 +552,6 @@ symbol_roles <- function(m, symbols) {
   )
 }
 
-species_by_amount <- function(id, sp, spatial, varying) {
-  row <- sp[sp$id == id, ]
-  !species_is_amount(row, spatial) && row$compartment %in% varying
-}
-
 local_name <- function(reaction, id) paste0(".local.", reaction, ".", id)
 
 # ---- Right-hand sides ------------------------------------------------------

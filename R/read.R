@@ -272,7 +272,7 @@ package_from_ns <- function(ns) {
 read_element <- function(i, kind, path, ctx) {
   t <- ctx$t
   spec <- element_spec(kind, ctx$version, ctx$level)
-  attributes <- read_attributes(NULL, spec, path, ctx, t$attrs[[i]])
+  attributes <- read_attributes(t$attrs[[i]], spec, path, ctx)
 
   out <- list(
     kind = kind,
@@ -358,11 +358,10 @@ read_list <- function(i, list_kind, path, ctx) {
   t <- ctx$t
   allowed <- sbml_lists[[list_kind]] %||% level2_lists[[list_kind]]
   read_attributes(
-    NULL,
+    t$attrs[[i]],
     list(attributes = sbase_attributes, section = "3.1"),
     path,
-    ctx,
-    t$attrs[[i]]
+    ctx
   )
   kids <- t$kids[[i]]
   items <- vector("list", length(kids))
@@ -401,12 +400,9 @@ read_list <- function(i, list_kind, path, ctx) {
   items[!vapply(items, is.null, logical(1))]
 }
 
-# `raw` is the element's attributes when the caller already has them: a list
-# reads all its items' attributes in one call.
-read_attributes <- function(node, spec, path, ctx, raw = NULL) {
-  if (is.null(raw)) {
-    raw <- zuxml::xml_attrs(node)[[1]]
-  }
+# `raw` is the element's attributes from the flat tree, a named character
+# vector.
+read_attributes <- function(raw, spec, path, ctx) {
   names_raw <- names(raw) %||% character(0)
   prefixed <- grepl(":", names_raw, fixed = TRUE)
   if (any(prefixed)) {
