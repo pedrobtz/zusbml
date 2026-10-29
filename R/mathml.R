@@ -83,6 +83,10 @@ math_op_r <- stats::setNames(math_ops$r, math_ops$mathml)
 math_op_arity <- stats::setNames(math_ops$arity, math_ops$mathml)
 math_op_mathml <- stats::setNames(math_ops$mathml, math_ops$r)
 
+# The functions model math calls once function definitions are inlined: the
+# table's and those the reader builds (piecewise, root, log, the csymbols).
+math_heads <- c(math_ops$r, "if", "sqrt", "log", "log10", "rateOf", "delay")
+
 # Definitions for the operators kept under their SBML names. quotient and
 # rem follow MathML 2.0: the quotient truncates toward zero and the
 # remainder takes the sign of the dividend.
@@ -178,6 +182,7 @@ math_env <- local({
 math_context <- new.env(parent = emptyenv())
 math_context$ids <- character(0)
 math_context$functions <- character(0)
+math_context$bvars <- character(0)
 math_context$time <- quote(time)
 
 time_name <- function(ids = math_context$ids) {
@@ -210,6 +215,7 @@ math_from_tree <- function(t, i, path, file, ids, functions) {
   old <- as.list(math_context)
   math_context$ids <- ids
   math_context$functions <- functions
+  math_context$bvars <- character(0)
   math_context$time <- time_name(ids)
   on.exit(list2env(old, math_context))
   kids <- t$kids[[i]]
@@ -418,7 +424,9 @@ mathml_apply <- function(t, i, path, file) {
 
   if (head_name == "ci") {
     name <- ci_name(t, head, path, file)
-    if (!name %in% math_context$functions) {
+    # A bound variable shadows a function definition of the same name, and
+    # inlining would put its argument in call position.
+    if (!name %in% math_context$functions || name %in% math_context$bvars) {
       math_error(
         paste0(
           "<apply> calls '",
@@ -630,6 +638,8 @@ mathml_lambda <- function(t, i, path, file) {
   )
   formals <- rep(list(quote(expr = )), length(names))
   names(formals) <- names
+  math_context$bvars <- names
+  on.exit(math_context$bvars <- character(0))
   call(
     "function",
     as.pairlist(formals),

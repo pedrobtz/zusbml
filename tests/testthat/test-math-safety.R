@@ -118,3 +118,71 @@ test_that("a symbol named like a function it uses is not a self-cycle", {
 
   expect_identical(eq$assignments$max, quote(max(a, b)))
 })
+
+test_that("many calls together are held to one inlining budget", {
+  defs <- paste0(
+    '<functionDefinition id="f0">',
+    mml(quote(function(x) x)),
+    "</functionDefinition>"
+  )
+  for (k in 1:13) {
+    g <- as.name(paste0("f", k - 1))
+    defs <- paste0(
+      defs,
+      '<functionDefinition id="f',
+      k,
+      '">',
+      mml(call(
+        "function",
+        as.pairlist(alist(x = )),
+        call(
+          "+",
+          call(as.character(g), quote(x)),
+          call(as.character(g), quote(x))
+        )
+      )),
+      "</functionDefinition>"
+    )
+  }
+  ids <- paste0("p", 1:20)
+  m <- sbml_read(model_doc(
+    functions = defs,
+    parameters = paste0(
+      par("k", 1),
+      paste0(vapply(ids, par, "", constant = FALSE), collapse = "")
+    ),
+    rules = paste0(
+      vapply(ids, function(id) rule("assignment", id, quote(f13(k))), ""),
+      collapse = ""
+    )
+  ))
+
+  expect_error(sbml_odes(m), class = "zusbml_derive_error")
+})
+
+test_that("a lambda cannot call its bound variable", {
+  defs <- paste0(
+    '<functionDefinition id="f">',
+    mml(quote(function(x) x)),
+    "</functionDefinition>",
+    '<functionDefinition id="call2"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+    "<lambda><bvar><ci>f</ci></bvar><bvar><ci>x</ci></bvar>",
+    "<apply><ci>f</ci><ci>x</ci></apply></lambda></math></functionDefinition>"
+  )
+  doc <- model_doc(functions = defs, parameters = par("k", 1))
+
+  expect_error(sbml_read(doc), class = "zusbml_parse_error")
+})
+
+test_that("derivation refuses calls to anything but operators", {
+  m <- sbml_read(model_doc(
+    parameters = paste0(par("k", 1), par("p", constant = FALSE)),
+    rules = rule("assignment", "p", quote(k))
+  ))
+  m$rules$math[[1]] <- quote(environment(k))
+
+  err <- expect_error(sbml_odes(m), class = "zusbml_derive_error")
+  expect_identical(err$ids, "p")
+  found <- sbml_check(m)
+  expect_identical(found$id[found$rule == "unknown_reference"], "environment")
+})

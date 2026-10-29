@@ -440,3 +440,100 @@ test_that("rateOf() of an expression or of an assigned symbol is refused", {
   err <- expect_error(sbml_odes(of_assigned), class = "zusbml_unsupported")
   expect_equal(err$id, "a")
 })
+
+test_that("right-hand side terms follow reactions, then reactants before products", {
+  eq <- odes(
+    species = paste0(
+      sp("A", amount = 1, only_substance = TRUE),
+      sp("B", amount = 1, only_substance = TRUE),
+      sp("D", amount = 1, only_substance = TRUE)
+    ),
+    parameters = par("k", 1),
+    reactions = paste0(
+      rxn("r1", quote(k), reactants = "A", products = "B"),
+      rxn("r2", quote(k), reactants = c("B", "D"), products = "A"),
+      rxn("r3", quote(k), reactants = "A", products = "A", stoich = 2),
+      rxn("r4", quote(k), reactants = "D")
+    )
+  )
+
+  expect_identical(eq$rhs$A, quote(-r1 + r2 - 2 * r3 + 2 * r3))
+  expect_identical(eq$rhs$B, quote(r1 - r2))
+  expect_identical(eq$rhs$D, quote(-r2 - r4))
+})
+
+test_that("independent assignment rules keep document order within a wave", {
+  eq <- odes(
+    parameters = paste0(
+      par("d", constant = FALSE),
+      par("a", constant = FALSE),
+      par("z", constant = FALSE),
+      par("b", constant = FALSE),
+      par("k", 1)
+    ),
+    rules = paste0(
+      rule("assignment", "d", quote(a + b)),
+      rule("assignment", "a", quote(k)),
+      rule("assignment", "z", 1),
+      rule("assignment", "b", quote(a))
+    )
+  )
+
+  expect_identical(names(eq$assignments), c("a", "z", "b", "d"))
+})
+
+test_that("sort_definitions() orders waves and tolerates repeated names", {
+  sort_definitions <- utils::getFromNamespace("sort_definitions", "zusbml")
+  defs <- list(d = quote(a + b), a = quote(k), z = 1, b = quote(a))
+  expect_identical(names(sort_definitions(defs, "x")), c("a", "z", "b", "d"))
+
+  twice <- list(p = 1, q = quote(p), p = 2)
+  expect_identical(names(sort_definitions(twice, "x")), c("p", "p", "q"))
+})
+
+test_that("a definition that uses itself is a derive error", {
+  doc <- model_doc(
+    parameters = paste0(par("a", constant = FALSE), par("k", 1)),
+    rules = rule("assignment", "a", quote(a + k))
+  )
+  err <- expect_error(sbml_odes(sbml_read(doc)), class = "zusbml_derive_error")
+  expect_identical(err$ids, "a")
+  found <- sbml_check(sbml_read(doc))
+  expect_identical(found$id[found$rule == "assignment_cycle"], "a")
+
+  doc <- model_doc(
+    parameters = paste0(par("a", 1, constant = FALSE), par("k", 1)),
+    initial = paste0(
+      '<initialAssignment symbol="a">',
+      mml(quote(a + k)),
+      "</initialAssignment>"
+    )
+  )
+  err <- expect_error(sbml_odes(sbml_read(doc)), class = "zusbml_derive_error")
+  expect_identical(err$ids, "a")
+})
+
+test_that("a symbol defined twice is a derive error, and sbml_check() reports it", {
+  doc <- model_doc(
+    parameters = paste0(par("p", constant = FALSE), par("k", 1)),
+    rules = paste0(
+      rule("assignment", "p", quote(k)),
+      rule("assignment", "p", quote(2 * k))
+    )
+  )
+  m <- sbml_read(doc)
+  err <- expect_error(sbml_odes(m), class = "zusbml_derive_error")
+  expect_identical(err$ids, "p")
+  found <- sbml_check(m)
+  expect_true("p" %in% found$id[found$rule == "multiple_definitions"])
+
+  doc <- model_doc(
+    species = sp("S", amount = 1),
+    parameters = par("S", 1)
+  )
+  err <- expect_error(
+    sbml_odes(sbml_read(doc)),
+    class = "zusbml_derive_error"
+  )
+  expect_identical(err$ids, "S")
+})

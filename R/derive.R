@@ -70,8 +70,10 @@ derive_odes <- function(m, overrides = NULL) {
   # A Level 3 Version 2 rule without math has no effect (section 4.9).
   m$rules <- m$rules[!vapply(m$rules$math, is.null, logical(1)), ]
   m <- inline_functions(m)
+  refuse_unknown_calls(m)
   symbols <- symbol_table(m)
   roles <- symbol_roles(m, symbols)
+  refuse_duplicates(m, roles)
   rhs <- state_rhs(m, symbols, roles)
   assignments <- runtime_assignments(m, symbols, roles)
   rhs <- lapply(
@@ -153,6 +155,57 @@ refuse_unknown_names <- function(m, roles, rhs, assignments) {
       ),
       unknown
     )
+  }
+}
+
+# After inlining, math may call only math_heads. The reader refuses an
+# <apply> of anything but a function definition, but a model built or
+# changed in R is not read (design D20).
+call_heads <- function(expr) {
+  if (!is.call(expr)) {
+    return(character(0))
+  }
+  head <- expr[[1]]
+  c(
+    if (is.name(head)) as.character(head) else "a computed function",
+    unlist(lapply(as.list(expr)[-1], call_heads))
+  )
+}
+
+refuse_unknown_calls <- function(m) {
+  m$functions <- m$functions[0, ]
+  for (expr in model_math(m)) {
+    bad <- setdiff(call_heads(expr$math), math_heads)
+    if (length(bad) > 0) {
+      abort_derive(
+        paste0(
+          "The math of '",
+          expr$where,
+          "' calls '",
+          bad[[1]],
+          "', which is neither a MathML operator nor a function definition."
+        ),
+        expr$where
+      )
+    }
+  }
+}
+
+# Each derived symbol has one definition: a symbol id used twice, or a
+# variable set by two rules, has no single equation (section 4.9.5).
+refuse_duplicates <- function(m, roles) {
+  ruled <- m$rules$variable[!is.na(m$rules$variable)]
+  for (twice in list(roles$name, ruled)) {
+    dup <- unique(twice[duplicated(twice)])
+    if (length(dup) > 0) {
+      abort_derive(
+        paste0(
+          paste0("'", dup, "'", collapse = ", "),
+          " is defined more than once."
+        ),
+        dup
+      )
+    }
   }
 }
 
@@ -241,6 +294,11 @@ model_math <- function(m) {
 
 # Replace every call to a function definition by its body, with the bound
 # variables substituted by the arguments, until none is left.
+#
+# Each use of a bound variable copies its argument, so nested definitions can
+# grow exponentially. The terms inlined across the whole model are counted,
+# so that neither one call nor many calls of a few kilobytes of document can
+# exhaust memory or time.
 max_inlined_size <- 1e5
 
 inline_functions <- function(m) {
@@ -248,6 +306,7 @@ inline_functions <- function(m) {
     return(m)
   }
   lambdas <- stats::setNames(m$functions$math, m$functions$id)
+  inlined <- 0
   expand <- function(expr, depth = 0) {
     if (depth > 100) {
       abort_derive(
@@ -288,17 +347,15 @@ inline_functions <- function(m) {
         substitute,
         list(lambda[[3]], stats::setNames(args, formals))
       )
-      # Each use of a bound variable copies its argument, so nested
-      # definitions can grow exponentially; a few kilobytes of document must
-      # not exhaust memory.
-      if (length(all.names(body)) > max_inlined_size) {
+      inlined <<- inlined + length(all.names(body))
+      if (inlined > max_inlined_size) {
         abort_derive(
           paste0(
-            "Inlining function '",
+            "Inlining function definitions gives more than ",
+            format(max_inlined_size, big.mark = ",", scientific = FALSE),
+            " terms; the last was '",
             fn,
-            "' gives an expression of more than ",
-            format(max_inlined_size, big.mark = ","),
-            " terms."
+            "'."
           ),
           as.character(fn)
         )
@@ -712,49 +769,43 @@ replace_rate_of <- function(expr, rhs, roles, assignments, depth = 0) {
 }
 
 # Order named definitions so that each comes after those it uses; a cycle is
-# a derive error naming the ids in it.
+# a derive error naming the ids in it. Each pass takes every definition whose
+# dependencies are all placed, in their original order. Dependencies are
+# kept as positions, so a name defined twice cannot break the bookkeeping.
 sort_definitions <- function(defs, what) {
   if (length(defs) == 0) {
     return(defs)
   }
-  names_all <- names(defs)
-  deps <- lapply(defs, function(e) intersect(all.vars(e), names_all))
-  self <- vapply(
-    seq_along(deps),
-    function(k) names_all[[k]] %in% deps[[k]],
-    logical(1)
-  )
-  # Each pass takes every definition whose dependencies are all done, in
-  # their original order; counts of outstanding dependencies avoid
-  # rescanning them.
-  outstanding <- vapply(
-    seq_along(deps),
-    function(k) {
-      length(setdiff(deps[[k]], names_all[[k]]))
-    },
-    integer(1)
-  )
+  ids <- names(defs)
+  at <- split(seq_along(ids), factor(ids, levels = unique(ids)))
+  self <- logical(length(defs))
+  deps <- vector("list", length(defs))
+  for (k in seq_along(defs)) {
+    used <- intersect(all.vars(defs[[k]]), ids)
+    self[[k]] <- ids[[k]] %in% used
+    deps[k] <- list(setdiff(unlist(at[used], use.names = FALSE), k))
+  }
+  outstanding <- lengths(deps)
   dependents <- split(
-    rep(seq_along(deps), lengths(deps)),
-    factor(unlist(deps), levels = names_all)
+    rep(seq_along(deps), outstanding),
+    factor(unlist(deps), levels = seq_along(defs))
   )
   placed <- rep(FALSE, length(defs))
-  order <- integer(0)
+  sorted <- integer(0)
   repeat {
     ready <- which(!placed & outstanding == 0 & !self)
     if (length(ready) == 0) {
       break
     }
-    order <- c(order, ready)
+    sorted <- c(sorted, ready)
     placed[ready] <- TRUE
     for (k in ready) {
-      users <- dependents[[names_all[[k]]]]
-      users <- users[users != k]
+      users <- dependents[[k]]
       outstanding[users] <- outstanding[users] - 1L
     }
   }
   if (!all(placed)) {
-    remaining <- names_all[!placed]
+    remaining <- unique(ids[!placed])
     abort_derive(
       paste0(
         "The ",
@@ -766,7 +817,7 @@ sort_definitions <- function(defs, what) {
       remaining
     )
   }
-  defs[order]
+  defs[sorted]
 }
 
 # ---- Time 0 ----------------------------------------------------------------
