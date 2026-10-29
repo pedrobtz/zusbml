@@ -53,11 +53,12 @@ sbml_read <- function(x, ignore_packages = FALSE) {
 
   root <- zuxml::xml_root(doc)
   read_level(root, ctx)
-  ctx$ids <- document_ids(doc)
-  ctx$functions <- function_ids(doc, ctx)
   # The whole document as flat vectors, read in a few vectorized calls; the
   # reader walks it by index (see flat_tree()).
   ctx$t <- flat_tree(root)
+  declared <- declared_ids(ctx$t, ctx$ns)
+  ctx$ids <- declared$ids
+  ctx$functions <- function_ids(declared$functions)
   # Every SId-valued attribute in the document, checked in one pass.
   values <- unlist(lapply(ctx$t$attrs, function(a) {
     a[names(a) %in% sid_attributes]
@@ -76,23 +77,37 @@ sbml_read <- function(x, ignore_packages = FALSE) {
   new_sbml_model(sbml, ctx)
 }
 
-# Every id the document declares, so math can tell the time csymbol and
-# <pi/> from model symbols of those names (design D16).
-document_ids <- function(doc) {
-  ids <- c(
-    zuxml::xml_attr(zuxml::xml_root(doc), "id", ns = NA),
-    zuxml::xml_attr(zuxml::xml_find(doc), "id", ns = NA)
-  )
-  unique(ids[!is.na(ids)])
+# The ids of the document's SBML elements, so math can tell the time csymbol
+# and <pi/> from model symbols of those names (design D16), and the ids of
+# the model's function definitions. Notes, annotation and elements of other
+# namespaces are not walked: an XHTML id="time" in <notes> declares nothing.
+# One pass per depth over the flat tree.
+declared_ids <- function(t, ns) {
+  id_of <- function(i) {
+    unlist(lapply(t$attrs[i], function(a) a[names(a) == "id"]))
+  }
+  ids <- id_of(1L)
+  functions <- character(0)
+  level <- 1L
+  while (length(level) > 0) {
+    kids <- unlist(t$kids[level])
+    kids <- kids[
+      t$ns[kids] %in% ns & !t$local[kids] %in% c("notes", "annotation")
+    ]
+    ids <- c(ids, id_of(kids))
+    lists <- level[t$local[level] == "listOfFunctionDefinitions"]
+    defs <- unlist(t$kids[lists])
+    defs <- defs[t$ns[defs] %in% ns & t$local[defs] == "functionDefinition"]
+    functions <- c(functions, id_of(defs))
+    level <- kids
+  }
+  list(ids = unique(ids), functions = functions)
 }
 
-# The ids of the document's function definitions: the only names math may
-# call (design D20). One that is also a built-in the math maps to, such as
-# `exp`, cannot be kept apart from it in R and is refused.
-function_ids <- function(doc, ctx) {
-  defs <- zuxml::xml_find(doc, "functionDefinition", ns = ctx$ns)
-  ids <- zuxml::xml_attr(defs, "id", ns = NA)
-  ids <- ids[!is.na(ids)]
+# The ids of the document's function definitions are the only names math
+# may call (design D20). One that is also a built-in the math maps to, such
+# as `exp`, cannot be kept apart from it in R and is refused.
+function_ids <- function(ids) {
   builtin <- c(math_base_names, ls(math_env), "pi", "rateOf", "delay")
   clash <- intersect(ids, builtin)
   if (length(clash) > 0) {
@@ -357,6 +372,14 @@ read_list <- function(i, list_kind, path, ctx) {
     local <- t$local[[k]]
     ns <- t$ns[[k]]
     if (!identical(ns, ctx$ns)) {
+      if (is.na(ns)) {
+        abort_parse(
+          paste0("Element <", local, "> is in no namespace"),
+          path = paste0(path, "/", local),
+          section = "3.1",
+          file = ctx$file
+        )
+      }
       note_packages(package_from_ns(ns), paste0(path, "/", local), ctx)
       next
     }
@@ -535,7 +558,8 @@ known_sid <- function(value, ctx) {
   !value %in% ctx$bad_sids
 }
 
-is_sid <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*$", x, perl = TRUE)
+# \\z, not $: PCRE's $ also matches before a final newline.
+is_sid <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*\\z", x, perl = TRUE)
 
 # XML Schema doubles: decimal or scientific notation, INF, -INF and NaN.
 parse_double <- function(x) {

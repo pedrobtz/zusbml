@@ -15,8 +15,9 @@
 #'   `NULL`.
 #' @section Errors:
 #' `zusbml_write_error` for math with no MathML equivalent, naming the R
-#' call, for text with characters XML 1.0 does not allow, and for notes,
-#' annotation or messages that are not well-formed XML.
+#' call, for text with characters XML 1.0 does not allow, for notes,
+#' annotation or messages that are not well-formed XML, and for a fast
+#' reaction, which Level 3 Version 2 cannot express.
 #' @export
 #' @examples
 #' m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))
@@ -25,6 +26,19 @@
 #' identical(sbml_read(path), m)
 sbml_write <- function(m, path = NULL) {
   check_model(m)
+  # Level 3 Version 2 has no fast attribute; dropping it would change the
+  # model's meaning without a word (design D7).
+  fast <- which(m$reactions$fast %in% TRUE)
+  if (length(fast) > 0) {
+    abort_write(
+      paste0(
+        "Reaction '",
+        m$reactions$id[[fast[[1]]]],
+        "' is fast, which SBML Level 3 Version 2 cannot express."
+      ),
+      "fast reaction"
+    )
+  }
   ids <- model_ids(m)
   text <- paste0(
     '<?xml version="1.0" encoding="UTF-8"?>\n',

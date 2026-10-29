@@ -29,8 +29,9 @@ The document is written as text, escaping attribute values and names.
 \section{Errors}{
 
 \code{zusbml_write_error} for math with no MathML equivalent, naming the R
-call, for text with characters XML 1.0 does not allow, and for notes,
-annotation or messages that are not well-formed XML.
+call, for text with characters XML 1.0 does not allow, for notes,
+annotation or messages that are not well-formed XML, and for a fast
+reaction, which Level 3 Version 2 cannot express.
 }
 
 \examples{

@@ -50,3 +50,16 @@ test_that("an argument error names the argument", {
   expect_snapshot(sbml_read(1), error = TRUE)
   expect_snapshot(sbml_odes(list()), error = TRUE)
 })
+
+test_that("a parse error in nested math names its path", {
+  doc <- model_doc(
+    parameters = par("p", constant = FALSE),
+    rules = paste0(
+      '<assignmentRule variable="p">',
+      '<math xmlns="http://www.w3.org/1998/Math/MathML">',
+      "<apply><plus/><cn>1</cn><ci>.x</ci></apply></math></assignmentRule>"
+    )
+  )
+
+  expect_snapshot(sbml_read(doc), error = TRUE)
+})

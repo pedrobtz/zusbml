@@ -36,6 +36,8 @@
   3.5.0 cases reproduce their reference results.
 
 * `sbml_write()` writes a model as SBML Level 3 Version 2; reading it back
-  gives an identical model for every readable SBML Test Suite case.
+  gives an identical model for every readable SBML Test Suite case. A fast
+  reaction, which Level 3 Version 2 cannot express, is a
+  `zusbml_write_error`.
   `sbml_write_json()` writes the model object as JSON, and
   `sbml_to_rxode2()` writes the equations as rxode2 model text.
