@@ -18,7 +18,8 @@
   ...). `sbml_math()` shows math as R code, and `sbml_functions()` adds each
   function definition as an R function. Math from a document can only call
   its own function definitions, and is evaluated without access to the
-  rest of R.
+  rest of R. Parse errors in math name the element at fault,
+  numbered among its same-named siblings (`math/apply/ci[2]`).
 
 * `sbml_odes()` derives the states, right-hand sides, assignments,
   constants and events of a model, following the Level 3 Version 2

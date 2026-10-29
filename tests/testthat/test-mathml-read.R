@@ -136,6 +136,59 @@ test_that("constants and names read", {
   expect_identical(from_mathml("<exponentiale/>"), quote(exp(1)))
 })
 
+test_that("names and numbers lose any whitespace around them on reading", {
+  # The math of an initial assignment to p, read through sbml_read().
+  read_math <- function(math) {
+    doc <- model_doc(
+      parameters = paste0(par_xml("k", 1), par_xml("p")),
+      initial = paste0(
+        '<initialAssignment symbol="p">',
+        '<math xmlns="http://www.w3.org/1998/Math/MathML">',
+        math,
+        "</math></initialAssignment>"
+      )
+    )
+    sbml_read(doc)$initial_assignments$math[[1]]
+  }
+
+  for (ci in c(
+    "<ci>k </ci>",
+    "<ci> k</ci>",
+    "<ci>\tk\n</ci>",
+    "<ci>\r\n k\t</ci>"
+  )) {
+    expect_identical(read_math(ci), quote(k), info = ci)
+  }
+  for (cn in c("<cn>2.5 </cn>", "<cn> 2.5</cn>", "<cn>\t2.5\n</cn>")) {
+    expect_identical(read_math(cn), 2.5, info = cn)
+  }
+  for (cn in c(
+    '<cn type="e-notation">1.5 <sep/>-3</cn>',
+    '<cn type="e-notation"> 1.5<sep/> -3 </cn>',
+    '<cn type="e-notation">\t1.5\n<sep/>\n-3\t</cn>'
+  )) {
+    expect_identical(read_math(cn), 1.5e-3, info = cn)
+  }
+  expect_identical(read_math('<cn type="rational"> 1 <sep/>\t4\n</cn>'), 0.25)
+})
+
+test_that("typed attribute values lose any whitespace around them", {
+  for (value in c("1.5 ", " 1.5", " 1.5 ")) {
+    doc <- model_doc(
+      parameters = paste0(
+        '<parameter id="k" value="',
+        value,
+        '" constant="true"/>'
+      )
+    )
+    expect_identical(sbml_read(doc)$parameters$value, 1.5, info = value)
+  }
+  doc <- model_doc(
+    parameters = '<parameter id="k" value="1" constant=" false"/>'
+  )
+  expect_false(sbml_read(doc)$parameters$constant)
+})
+
 test_that("csymbols become time, the Avogadro constant, rateOf and delay", {
   url <- function(x) {
     paste0('definitionURL="http://www.sbml.org/sbml/symbols/', x, '"')
@@ -299,8 +352,8 @@ test_that("a parse error in nested math names its full path", {
   bad <- "<ci>.x</ci>"
   rule_path <- "sbml/model/listOfRules/assignmentRule[1]/math/"
   cases <- list(
-    "apply[3]/ci" = paste0("<apply><plus/><cn>1</cn>", bad, "</apply>"),
-    "apply[3]/apply[3]/ci" = paste0(
+    "apply/ci[2]" = paste0("<apply><plus/><ci>p</ci>", bad, "</apply>"),
+    "apply/apply/ci" = paste0(
       "<apply><plus/><cn>1</cn><apply><times/><cn>2</cn>",
       bad,
       "</apply></apply>"
@@ -328,7 +381,7 @@ test_that("a parse error in nested math names its full path", {
   )
   for (where in names(cases)) {
     doc <- model_doc(
-      parameters = par("p", constant = FALSE),
+      parameters = par_xml("p", constant = FALSE),
       rules = paste0(
         '<assignmentRule variable="p">',
         M(cases[[where]]),
@@ -353,6 +406,74 @@ test_that("a parse error in nested math names its full path", {
   err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
   expect_equal(
     err$path,
-    "sbml/model/listOfFunctionDefinitions/functionDefinition[1]/math/lambda/body/apply[3]/ci"
+    "sbml/model/listOfFunctionDefinitions/functionDefinition[1]/math/lambda/apply/ci[2]"
   )
+})
+
+test_that("a bound variable's error names the bvar", {
+  doc <- model_doc(
+    functions = paste0(
+      '<functionDefinition id="f"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      "<lambda><bvar><ci>x</ci></bvar><bvar><ci>.y</ci></bvar>",
+      "<ci>x</ci></lambda></math></functionDefinition>"
+    )
+  )
+
+  err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
+  expect_match(err$path, "/math/lambda/bvar\\[2\\]/ci$")
+})
+
+test_that("text without an element inside <math> is a parse error", {
+  doc <- model_doc(
+    parameters = par_xml("p", constant = FALSE),
+    rules = paste0(
+      '<assignmentRule variable="p">',
+      '<math xmlns="http://www.w3.org/1998/Math/MathML"> oops </math>',
+      "</assignmentRule>"
+    )
+  )
+
+  err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
+  expect_match(err$path, "assignmentRule\\[1\\]/math$")
+  blank <- sub(" oops ", "  ", doc, fixed = TRUE)
+  expect_null(sbml_rules(sbml_read(blank))$math[[1]])
+})
+
+test_that("an apply head outside MathML is refused even if named ci", {
+  for (head in c("ci", "csymbol")) {
+    expect_error(
+      from_mathml(paste0(
+        '<apply><x:',
+        head,
+        ' xmlns:x="urn:x">f</x:',
+        head,
+        '><cn>1</cn></apply>'
+      )),
+      class = "zusbml_parse_error",
+      info = head
+    )
+  }
+})
+
+test_that("<cn> holds only numbers and <sep/>", {
+  expect_error(
+    from_mathml('<cn type="rational">1<apply/>2</cn>'),
+    class = "zusbml_parse_error"
+  )
+  expect_error(
+    from_mathml('<cn type="rational">1<x:sep xmlns:x="urn:x"/>2</cn>'),
+    class = "zusbml_parse_error"
+  )
+  expect_equal(from_mathml('<cn type="rational">1<sep/>2</cn>'), 0.5)
+})
+
+test_that("an integer <cn> must hold an integer", {
+  expect_identical(from_mathml('<cn type="integer"> -3 </cn>'), -3)
+  for (bad in c("1.5", "1e3", "INF")) {
+    expect_error(
+      from_mathml(paste0('<cn type="integer">', bad, "</cn>")),
+      class = "zusbml_parse_error",
+      info = bad
+    )
+  }
 })

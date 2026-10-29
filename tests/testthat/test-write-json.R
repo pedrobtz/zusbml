@@ -15,5 +15,8 @@ test_that("sbml_write_json() writes to a file", {
   path <- withr::local_tempfile(fileext = ".json")
 
   expect_identical(sbml_write_json(m, path), path)
-  expect_true(file.size(path) > 0)
+  expect_identical(
+    zujson::json_parse(readChar(path, file.size(path), useBytes = TRUE)),
+    zujson::json_parse(sbml_write_json(m))
+  )
 })

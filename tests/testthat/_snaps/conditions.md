@@ -60,5 +60,5 @@
       sbml_read(doc)
     Condition
       Error:
-      ! <ci> name '.x' is not a valid SBML identifier at sbml/model/listOfRules/assignmentRule[1]/math/apply[3]/ci (SBML L3V2 3.4).
+      ! <ci> name '.x' is not a valid SBML identifier at sbml/model/listOfRules/assignmentRule[1]/math/apply/ci (SBML L3V2 3.4).
 
