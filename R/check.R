@@ -118,6 +118,7 @@ sbml_check <- function(m) {
   # Names used in math must be model symbols, reaction ids (their rates),
   # local parameters of the same reaction, or a lambda's bound variables.
   known <- c(valued, m$reactions$id, "time", ".time", "pi")
+  callable <- c(math_heads, m$functions$id)
   check_math <- function(expr, where, extra = character(0)) {
     if (is.null(expr)) {
       return()
@@ -135,6 +136,19 @@ sbml_check <- function(m) {
           "' uses '",
           name,
           "', which is not defined."
+        )
+      )
+    }
+    for (name in unique(setdiff(call_heads(expr), callable))) {
+      add(
+        "unknown_reference",
+        name,
+        paste0(
+          "The math of '",
+          where,
+          "' calls '",
+          name,
+          "', which is neither a MathML operator nor a function definition."
         )
       )
     }
@@ -156,6 +170,19 @@ sbml_check <- function(m) {
             "' uses '",
             name,
             "', which is not one of its arguments."
+          )
+        )
+      }
+      for (name in unique(setdiff(call_heads(lambda[[3]]), callable))) {
+        add(
+          "unknown_reference",
+          name,
+          paste0(
+            "Function '",
+            m$functions$id[[i]],
+            "' calls '",
+            name,
+            "', which is neither a MathML operator nor a function definition."
           )
         )
       }

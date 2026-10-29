@@ -451,12 +451,14 @@ decides it and the maintainer may overturn it.
   it is evaluated only in an environment built from an allowlist of base
   functions (the ones the MathML table and the compiled derivative functions
   produce) with the empty environment above it. The reader refuses an
-  `<apply>` whose `<ci>` head is not a function definition of the document,
-  refuses function definitions named like those built-ins (`exp`, `max`, ...),
-  and requires a function definition's math to be a lambda; derivation refuses
-  a name the model does not define and caps inlined function definitions at
-  10^5 terms. Before this, a document could call `system()` from
-  `sbml_odes()`.
+  `<apply>` whose `<ci>` head is not a function definition of the document
+  or is a bound variable of the enclosing lambda, refuses function
+  definitions named like those built-ins (`exp`, `max`, ...), and requires a
+  function definition's math to be a lambda; derivation refuses a name the
+  model does not define, a call to anything but a MathML operator once
+  function definitions are inlined, and more than 10^5 inlined terms across
+  the whole model (review #71, #76). Before this, a document could call
+  `system()` from `sbml_odes()`.
 - **D13 (M, 2026-10-28).** deSolve alone runs the Test Suite comparison
   in v0.1.0 (`Suggests: deSolve`). `zupkode` is not on CRAN; it can be
   added after it is.
