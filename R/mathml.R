@@ -87,14 +87,11 @@ math_op_mathml <- stats::setNames(math_ops$mathml, math_ops$r)
 # table's and those the reader builds (piecewise, root, log, the csymbols).
 math_heads <- c(math_ops$r, "if", "sqrt", "log", "log10", "rateOf", "delay")
 
-# Definitions for the operators kept under their SBML names. quotient and
-# rem follow MathML 2.0: the quotient truncates toward zero and the
-# remainder takes the sign of the dividend.
 # The only base R functions model math can reach: those the MathML table and
-# the compiled derivative functions produce. Its parent is the empty
-# environment, so a document cannot call system(), file.remove() or anything
-# else, and a name that is not a model symbol is an error rather than a base R
-# object such as `T` (design D20).
+# the compiled derivative functions produce. math_base holds them, and its
+# parent is the empty environment, so a document cannot call system(),
+# file.remove() or anything else, and a name that is not a model symbol is an
+# error rather than a base R object such as `T` (design D20).
 math_base_names <- c(
   "+",
   "-",
@@ -158,6 +155,9 @@ math_base <- local({
   env
 })
 
+# Definitions for the operators kept under their SBML names. quotient and
+# rem follow MathML 2.0: the quotient truncates toward zero and the
+# remainder takes the sign of the dividend.
 math_env <- local({
   env <- new.env(parent = math_base)
   env$quotient <- function(x, y) trunc(x / y)
