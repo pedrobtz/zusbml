@@ -64,8 +64,8 @@ table_of <- function(rows, columns) {
     if (is.list(proto)) {
       return(values)
     }
-    missing <- vapply(values, is.null, logical(1))
-    values[missing] <- list(proto[NA_integer_])
+    absent <- vapply(values, is.null, logical(1))
+    values[absent] <- list(proto[NA_integer_])
     unlist(values, use.names = FALSE) %||% proto
   })
   names(out) <- names(columns)

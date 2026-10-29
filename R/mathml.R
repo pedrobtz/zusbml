@@ -4,6 +4,41 @@
 # Operators without an exact base R equivalent keep their SBML name and are
 # defined in math_env, the environment derived equations evaluate in.
 
+#' Show model math as R code
+#'
+#' Model math is held as R language objects: SBML's MathML operators become
+#' the matching R calls (`<power/>` is `^`, `<ln/>` is `log()`,
+#' `<piecewise>` is nested `if`), the `time` csymbol is the name `time`,
+#' and lambdas are `function` expressions. Operators without an exact base R
+#' equivalent keep their SBML name: `quotient()`, `rem()`, `implies()`,
+#' `sec()` and the other reciprocal trigonometric functions, `rateOf()` and
+#' `delay()`.
+#'
+#' @param x An expression from a model, such as `sbml_rules(m)$math[[1]]`; a
+#'   part holding one in `$math`, such as `sbml_reactions(m)$kinetic_law[[1]]`;
+#'   or a list of either.
+#' @return A character vector with one line of R code per expression, `NA`
+#'   for absent math.
+#' @export
+#' @examples
+#' m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))
+#' sbml_math(sbml_reactions(m)$kinetic_law[[1]])
+sbml_math <- function(x) {
+  one <- function(e) {
+    if (is.list(e) && !is.null(names(e)) && "math" %in% names(e)) {
+      e <- e$math
+    }
+    if (is.null(e)) {
+      return(NA_character_)
+    }
+    paste(deparse(e, width.cutoff = 500L), collapse = " ")
+  }
+  if (is.list(x) && (is.null(names(x)) || !"math" %in% names(x))) {
+    return(vapply(x, one, character(1)))
+  }
+  one(x)
+}
+
 csymbol_url <- c(
   time = "http://www.sbml.org/sbml/symbols/time",
   avogadro = "http://www.sbml.org/sbml/symbols/avogadro",
@@ -235,11 +270,11 @@ math_from_tree <- function(t, i, path, file, ids, functions) {
 # Element 1 is the subtree's root; nodes[[i]] is the node itself, for the
 # few cases that still need it.
 flat_tree <- function(node) {
-  all <- c(node, zuxml::xml_find(node))
-  ids <- as.integer(all)
+  nodes <- c(node, zuxml::xml_find(node))
+  ids <- as.integer(nodes)
   n <- length(ids)
-  parent <- match(as.integer(zuxml::xml_parent(all)), ids)
-  local <- zuxml::xml_local(all)
+  parent <- match(as.integer(zuxml::xml_parent(nodes)), ids)
+  local <- zuxml::xml_local(nodes)
   kids <- vector("list", n)
   if (n > 1) {
     by_parent <- split(seq_len(n)[-1], parent[-1])
@@ -249,7 +284,7 @@ flat_tree <- function(node) {
   text <- rep(NA_character_, n)
   textual <- which(local %in% c("ci", "cn", "csymbol"))
   if (length(textual) > 0) {
-    text[textual] <- zuxml::xml_text(all[textual])
+    text[textual] <- zuxml::xml_text(nodes[textual])
   }
   # <ci> names trimmed and checked as SIds in one pass, not one per name.
   ci <- which(local == "ci")
@@ -258,10 +293,10 @@ flat_tree <- function(node) {
   sid <- rep(FALSE, n)
   sid[ci] <- is_sid(name[ci])
   list(
-    nodes = all,
+    nodes = nodes,
     local = local,
-    ns = zuxml::xml_ns(all),
-    attrs = zuxml::xml_attrs(all),
+    ns = zuxml::xml_ns(nodes),
+    attrs = zuxml::xml_attrs(nodes),
     kids = kids,
     text = text,
     name = name,
@@ -882,15 +917,19 @@ format_double <- function(x) {
   text
 }
 
+# The control characters XML 1.0 does not allow at all, as a character class
+# body.
+xml_control <- "\x01-\x08\x0B\x0C\x0E-\x1F"
+
 # Text escaped for XML. Characters XML 1.0 does not allow at all (most
 # control characters) cannot be written.
 xml_escape <- function(x) {
   # Most text needs no escaping; one check finds what does.
-  special <- grepl("[&<>\x01-\x08\x0B\x0C\x0E-\x1F]", x, perl = TRUE)
+  special <- grepl(paste0("[&<>", xml_control, "]"), x, perl = TRUE)
   if (!any(special)) {
     return(x)
   }
-  if (any(grepl("[\x01-\x08\x0B\x0C\x0E-\x1F]", x[special], perl = TRUE))) {
+  if (any(grepl(paste0("[", xml_control, "]"), x[special], perl = TRUE))) {
     abort_write(
       "Text with a control character cannot be written as XML 1.0.",
       "text"
@@ -901,39 +940,4 @@ xml_escape <- function(x) {
   y <- gsub("<", "&lt;", y, fixed = TRUE)
   x[special] <- gsub(">", "&gt;", y, fixed = TRUE)
   x
-}
-
-#' Show model math as R code
-#'
-#' Model math is held as R language objects: SBML's MathML operators become
-#' the matching R calls (`<power/>` is `^`, `<ln/>` is `log()`,
-#' `<piecewise>` is nested `if`), the `time` csymbol is the name `time`,
-#' and lambdas are `function` expressions. Operators without an exact base R
-#' equivalent keep their SBML name: `quotient()`, `rem()`, `implies()`,
-#' `sec()` and the other reciprocal trigonometric functions, `rateOf()` and
-#' `delay()`.
-#'
-#' @param x An expression from a model, such as `sbml_rules(m)$math[[1]]`; a
-#'   part holding one in `$math`, such as `sbml_reactions(m)$kinetic_law[[1]]`;
-#'   or a list of either.
-#' @return A character vector with one line of R code per expression, `NA`
-#'   for absent math.
-#' @export
-#' @examples
-#' m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))
-#' sbml_math(sbml_reactions(m)$kinetic_law[[1]])
-sbml_math <- function(x) {
-  one <- function(e) {
-    if (is.list(e) && !is.null(names(e)) && "math" %in% names(e)) {
-      e <- e$math
-    }
-    if (is.null(e)) {
-      return(NA_character_)
-    }
-    paste(deparse(e, width.cutoff = 500L), collapse = " ")
-  }
-  if (is.list(x) && (is.null(names(x)) || !"math" %in% names(x))) {
-    return(vapply(x, one, character(1)))
-  }
-  one(x)
 }

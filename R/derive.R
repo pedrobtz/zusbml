@@ -74,8 +74,8 @@ derive_odes <- function(m, overrides = NULL) {
   symbols <- symbol_table(m)
   roles <- symbol_roles(m, symbols)
   refuse_duplicates(m, roles)
-  rhs <- state_rhs(m, symbols, roles)
-  assignments <- runtime_assignments(m, symbols, roles)
+  rhs <- state_rhs(m, roles)
+  assignments <- runtime_assignments(m, roles)
   rhs <- lapply(
     rhs,
     replace_rate_of,
@@ -114,7 +114,7 @@ derive_odes <- function(m, overrides = NULL) {
     assignments = assignments,
     constants = unlist(values[constant_ids]) %||% numeric(0),
     initial = unlist(values[states$name]) %||% numeric(0),
-    species = species_info(m, symbols),
+    species = species_info(m),
     events = derive_events(m, roles, rhs, assignments)
   )
 }
@@ -131,18 +131,14 @@ sbml_initial_state <- function(m) {
 # allowlisted environment, resolve to a base R object such as `T` (design
 # D20).
 refuse_unknown_names <- function(m, roles, rhs, assignments) {
-  exprs <- c(rhs, assignments, m$initial_assignments$math)
-  for (e in m$events$trigger) {
-    exprs <- c(exprs, list(e$math))
-  }
-  for (p in c("priority", "delay")) {
-    for (e in m$events[[p]]) {
-      exprs <- c(exprs, list(e$math))
-    }
-  }
-  for (a in m$events$assignments) {
-    exprs <- c(exprs, a$math)
-  }
+  ev <- m$events
+  exprs <- c(
+    rhs,
+    assignments,
+    m$initial_assignments$math,
+    lapply(c(ev$trigger, ev$priority, ev$delay), `[[`, "math"),
+    unlist(lapply(ev$assignments, `[[`, "math"), recursive = FALSE)
+  )
   used <- unique(unlist(lapply(exprs, all.vars)))
   known <- c(roles$name, ".time", "time", "pi")
   unknown <- setdiff(used, known)
@@ -244,8 +240,7 @@ refuse_underivable <- function(m) {
         paste0(
           "The delay csymbol (in ",
           expr$where,
-          ") makes the model a ",
-          "delay differential equation, which is not supported."
+          ") makes the model a delay differential equation, which is not supported."
         ),
         construct = "delay",
         id = expr$where,
@@ -287,8 +282,6 @@ model_math <- function(m) {
   }
   out
 }
-
-`%|%` <- function(x, y) if (is.na(x)) y else x
 
 # ---- Function definitions --------------------------------------------------
 
@@ -560,7 +553,7 @@ local_name <- function(reaction, id) paste0(".local.", reaction, ".", id)
 
 # ---- Right-hand sides ------------------------------------------------------
 
-state_rhs <- function(m, symbols, roles) {
+state_rhs <- function(m, roles) {
   states <- roles[roles$role == "state", ]
   rules <- m$rules[m$rules$type == "rate", ]
   rate_of <- stats::setNames(rules$math, rules$variable)
@@ -572,6 +565,10 @@ state_rhs <- function(m, symbols, roles) {
   )
   laws <- reaction_rates(m)
   model_cf <- m$conversion_factor
+  spatial <- stats::setNames(
+    m$compartments$spatial_dimensions,
+    m$compartments$id
+  )
 
   rhs <- list()
   for (i in seq_len(nrow(states))) {
@@ -606,13 +603,7 @@ state_rhs <- function(m, symbols, roles) {
       change <- call("*", change, as.name(cf))
     }
     is_amount_state <- startsWith(name, ".amount.") ||
-      species_is_amount(
-        row,
-        stats::setNames(
-          m$compartments$spatial_dimensions,
-          m$compartments$id
-        )
-      )
+      species_is_amount(row, spatial)
     if (!is_amount_state && !identical(change, 0)) {
       change <- call("/", change, as.name(row$compartment))
     }
@@ -693,7 +684,7 @@ species_change <- function(species, refs, laws) {
 
 # ---- Assignments -----------------------------------------------------------
 
-runtime_assignments <- function(m, symbols, roles) {
+runtime_assignments <- function(m, roles) {
   rules <- m$rules[m$rules$type == "assignment", ]
   out <- stats::setNames(rules$math, rules$variable)
   out <- c(out, reaction_rates(m))
@@ -890,7 +881,7 @@ initial_values <- function(
   }
 
   needed <- roles$name[roles$role %in% c("state", "constant")]
-  missing <- needed[vapply(
+  unset <- needed[vapply(
     needed,
     function(n) {
       v <- values[[n]]
@@ -899,21 +890,21 @@ initial_values <- function(
     logical(1)
   )]
   used <- unique(unlist(lapply(c(rhs, assignments), all.names)))
-  missing <- missing[missing %in% used | missing %in% names(rhs)]
-  if (length(missing) > 0) {
+  unset <- unset[unset %in% used | unset %in% names(rhs)]
+  if (length(unset) > 0) {
     abort_derive(
       paste0(
         "No value at time 0 for ",
-        paste(missing, collapse = ", "),
+        paste(unset, collapse = ", "),
         ": give it a value or an initial assignment."
       ),
-      missing
+      unset
     )
   }
   values
 }
 
-species_info <- function(m, symbols) {
+species_info <- function(m) {
   comps <- m$compartments
   spatial <- stats::setNames(comps$spatial_dimensions, comps$id)
   sp <- m$species

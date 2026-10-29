@@ -229,8 +229,7 @@ sbml_check <- function(m) {
       paste0(
         "'",
         v,
-        "' has both an assignment rule and an initial ",
-        "assignment."
+        "' has both an assignment rule and an initial assignment."
       )
     )
   }
@@ -242,8 +241,7 @@ sbml_check <- function(m) {
       paste0(
         "Species '",
         v,
-        "' is changed by reactions and set by a ",
-        "rule; make it a boundary species."
+        "' is changed by reactions and set by a rule; make it a boundary species."
       )
     )
   }
