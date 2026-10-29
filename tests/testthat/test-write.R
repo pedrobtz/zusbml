@@ -133,6 +133,90 @@ test_that("quotes, ampersands and angle brackets in names are escaped", {
   expect_identical(sbml_read(sbml_write(m)), m)
 })
 
+test_that("each special character in an attribute value is escaped alone", {
+  escaped <- c(
+    '"' = "&quot;",
+    "\t" = "&#9;",
+    "\n" = "&#10;",
+    "\r" = "&#13;",
+    ">" = "&gt;",
+    "<" = "&lt;",
+    "&" = "&amp;"
+  )
+  for (k in seq_along(escaped)) {
+    m <- sbml_read(model_doc(parameters = par_xml("p", 1)))
+    m$parameters$name <- paste0("a", names(escaped)[[k]], "b")
+
+    text <- sbml_write(m)
+
+    expect_match(
+      text,
+      paste0('name="a', escaped[[k]], 'b"'),
+      fixed = TRUE,
+      info = escaped[[k]]
+    )
+    expect_identical(sbml_read(text), m, info = escaped[[k]])
+  }
+})
+
+test_that("one attribute needing escapes leaves the others as they are", {
+  m <- sbml_read(model_doc(parameters = par_xml("p", 1)))
+  m$parameters$name <- 'say "hi"'
+
+  text <- sbml_write(m)
+
+  expect_match(
+    text,
+    '<parameter id="p" name="say &quot;hi&quot;" value="1" constant="true"/>',
+    fixed = TRUE
+  )
+  expect_identical(sbml_read(text), m)
+})
+
+test_that("an element without math is written without a math child", {
+  m <- sbml_read(model_doc(
+    parameters = par_xml("p", constant = FALSE),
+    rules = '<assignmentRule variable="p"/>'
+  ))
+
+  text <- sbml_write(m)
+
+  expect_match(
+    text,
+    '<listOfRules><assignmentRule variable="p"/></listOfRules>',
+    fixed = TRUE
+  )
+  expect_identical(sbml_read(text), m)
+})
+
+test_that("an event is written with only the priority and delay it has", {
+  bare <- sbml_read(growth(evt("e", quote(x > 1), list(p = 1))))
+  full <- sbml_read(growth(evt(
+    "e",
+    quote(x > 1),
+    list(p = 1),
+    delay = 2,
+    priority = 3
+  )))
+
+  bare_text <- sbml_write(bare)
+  full_text <- sbml_write(full)
+
+  expect_no_match(bare_text, "<priority|<delay")
+  expect_match(
+    full_text,
+    paste0(
+      '</trigger><priority><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      '<cn type="integer">3</cn></math></priority>',
+      '<delay><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      '<cn type="integer">2</cn></math></delay><listOfEventAssignments>'
+    ),
+    fixed = TRUE
+  )
+  expect_identical(sbml_read(bare_text), bare)
+  expect_identical(sbml_read(full_text), full)
+})
+
 test_that("text that is not well-formed XML is a write error", {
   m <- sbml_read(model_doc(parameters = par_xml("p", 1)))
   m$notes <- "a < b"
