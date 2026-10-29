@@ -16,7 +16,7 @@ test_that("rxode2 text rewrites what rxode2 lacks", {
 
 test_that("sbml_to_rxode2() refuses events unless asked to drop them", {
   doc <- with_events(
-    model_doc(parameters = par("p", 0, constant = FALSE)),
+    model_doc(parameters = par_xml("p", 0, constant = FALSE)),
     evt("e", quote(time >= 1), list(p = 1))
   )
   m <- sbml_read(doc)
@@ -28,7 +28,9 @@ test_that("sbml_to_rxode2() refuses events unless asked to drop them", {
 
 test_that("names rxode2 cannot take get a .u prefix", {
   rxode2_expr <- utils::getFromNamespace("rxode2_expr", "zusbml")
-  m <- sbml_read(model_doc(parameters = paste0(par("_J0", 1), par("param", 2))))
+  m <- sbml_read(model_doc(
+    parameters = paste0(par_xml("_J0", 1), par_xml("param", 2))
+  ))
 
   text <- sbml_to_rxode2(m)
 
@@ -59,8 +61,8 @@ test_that("rxode2 parses the text for a set of event-free models", {
     list(
       doc = model_doc(
         compartments = '<compartment id="C" size="2" constant="false"/>',
-        species = sp("A", conc = 3),
-        parameters = paste0(par("q", constant = FALSE), par("k", 2)),
+        species = sp_xml("A", conc = 3),
+        parameters = paste0(par_xml("q", constant = FALSE), par_xml("k", 2)),
         rules = paste0(
           rule("rate", "C", quote(sin(time))),
           rule(

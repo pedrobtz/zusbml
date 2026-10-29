@@ -140,7 +140,7 @@ test_that("an event that resizes a compartment keeps species amounts", {
   doc <- with_events(
     model_doc(
       compartments = '<compartment id="C" size="1" constant="false"/>',
-      species = sp("S", conc = 2)
+      species = sp_xml("S", conc = 2)
     ),
     evt("e", quote(time >= 1), list(C = 4))
   )
@@ -155,7 +155,7 @@ test_that("an event assigning a concentration and its compartment uses the old s
   doc <- with_events(
     model_doc(
       compartments = '<compartment id="C" size="1" constant="false"/>',
-      species = sp("S", conc = 2)
+      species = sp_xml("S", conc = 2)
     ),
     evt("e", quote(time >= 1), list(C = 4, S = 3))
   )
@@ -167,12 +167,12 @@ test_that("an event assigning a concentration and its compartment uses the old s
 
 test_that("an event cannot assign a constant or a rule's variable", {
   constant <- with_events(
-    model_doc(parameters = par("k", 1)),
+    model_doc(parameters = par_xml("k", 1)),
     evt("e", quote(time >= 1), list(k = 2))
   )
   ruled <- with_events(
     model_doc(
-      parameters = paste0(par("q", constant = FALSE), par("k", 1)),
+      parameters = paste0(par_xml("q", constant = FALSE), par_xml("k", 1)),
       rules = rule("assignment", "q", quote(k))
     ),
     evt("e", quote(time >= 1), list(q = 2))
@@ -210,7 +210,7 @@ test_that("a concentration taken at trigger time converts with the size at execu
   doc <- with_events(
     model_doc(
       compartments = '<compartment id="C" size="1" constant="false"/>',
-      species = sp("S", conc = 2),
+      species = sp_xml("S", conc = 2),
       rules = rule("rate", "C", 1)
     ),
     evt("e", quote(time >= 1), list(S = 3), delay = 1)

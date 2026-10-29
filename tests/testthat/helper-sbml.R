@@ -78,7 +78,7 @@ model_doc <- function(
   )
 }
 
-sp <- function(
+sp_xml <- function(
   id,
   amount = NULL,
   conc = NULL,
@@ -110,7 +110,7 @@ sp <- function(
   )
 }
 
-par <- function(id, value = NULL, constant = TRUE) {
+par_xml <- function(id, value = NULL, constant = TRUE) {
   paste0(
     '<parameter id="',
     id,
@@ -251,8 +251,8 @@ growth <- function(events, p = 0) {
   with_events(
     model_doc(
       parameters = paste0(
-        par("x", 0, constant = FALSE),
-        par("p", p, constant = FALSE)
+        par_xml("x", 0, constant = FALSE),
+        par_xml("p", p, constant = FALSE)
       ),
       rules = rule("rate", "x", 1)
     ),

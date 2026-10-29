@@ -242,7 +242,7 @@ test_that("a directory is refused before reading", {
 
 test_that("only listOfFunctionDefinitions declares functions math may call", {
   doc <- model_doc(
-    parameters = paste0(par("k", 1), par("p", constant = FALSE)),
+    parameters = paste0(par_xml("k", 1), par_xml("p", constant = FALSE)),
     rules = paste0(
       '<assignmentRule variable="p"><math xmlns="http://www.w3.org/1998/Math/MathML">',
       "<apply><ci>g</ci><ci>k</ci></apply></math></assignmentRule>"
@@ -267,7 +267,7 @@ test_that("only listOfFunctionDefinitions declares functions math may call", {
 test_that("an element in no namespace inside a list is a parse error", {
   doc <- model_doc(
     parameters = paste0(
-      par("k", 1),
+      par_xml("k", 1),
       '<parameter xmlns="" id="k2" constant="true"/>'
     )
   )

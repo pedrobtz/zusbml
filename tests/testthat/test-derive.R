@@ -1,10 +1,10 @@
 test_that("an amount species changes by stoichiometry times rate", {
   eq <- odes(
     species = paste0(
-      sp("A", amount = 5, only_substance = TRUE),
-      sp("B", amount = 0, only_substance = TRUE)
+      sp_xml("A", amount = 5, only_substance = TRUE),
+      sp_xml("B", amount = 0, only_substance = TRUE)
     ),
-    parameters = par("k", 0.5),
+    parameters = par_xml("k", 0.5),
     reactions = rxn(
       "r",
       quote(k * A),
@@ -24,7 +24,7 @@ test_that("an amount species changes by stoichiometry times rate", {
 
 test_that("a concentration species divides by its compartment", {
   eq <- odes(
-    species = sp("A", conc = 3),
+    species = sp_xml("A", conc = 3),
     reactions = rxn("r", 1, reactants = "A")
   )
 
@@ -33,7 +33,7 @@ test_that("a concentration species divides by its compartment", {
 })
 
 test_that("initialAmount of a concentration species is divided by the size", {
-  eq <- odes(species = sp("A", amount = 4))
+  eq <- odes(species = sp_xml("A", amount = 4))
 
   expect_equal(eq$initial, c(A = 2))
 })
@@ -41,7 +41,7 @@ test_that("initialAmount of a concentration species is divided by the size", {
 test_that("a species in a compartment that changes size is integrated as an amount", {
   eq <- odes(
     compartments = '<compartment id="C" size="2" constant="false"/>',
-    species = sp("A", conc = 3),
+    species = sp_xml("A", conc = 3),
     rules = rule("rate", "C", 1),
     reactions = rxn("r", 1, reactants = "A")
   )
@@ -55,7 +55,7 @@ test_that("a species in a compartment that changes size is integrated as an amou
 test_that("a constant species in a growing compartment keeps its amount", {
   eq <- odes(
     compartments = '<compartment id="C" size="2" constant="false"/>',
-    species = sp("A", conc = 3, constant = TRUE),
+    species = sp_xml("A", conc = 3, constant = TRUE),
     rules = rule("rate", "C", 1)
   )
 
@@ -65,7 +65,7 @@ test_that("a constant species in a growing compartment keeps its amount", {
 
 test_that("boundary species are not changed by reactions", {
   eq <- odes(
-    species = sp("A", amount = 1, boundary = TRUE),
+    species = sp_xml("A", amount = 1, boundary = TRUE),
     reactions = rxn("r", 1, reactants = "A")
   )
 
@@ -74,8 +74,8 @@ test_that("boundary species are not changed by reactions", {
 
 test_that("constant species and parameters are constants", {
   eq <- odes(
-    species = sp("A", conc = 1, constant = TRUE),
-    parameters = par("k", 2)
+    species = sp_xml("A", conc = 1, constant = TRUE),
+    parameters = par_xml("k", 2)
   )
 
   expect_equal(eq$constants, c(C = 2, A = 1, k = 2))
@@ -85,15 +85,15 @@ test_that("constant species and parameters are constants", {
 test_that("conversion factors multiply the change, species before model", {
   eq <- odes(
     species = paste0(
-      sp(
+      sp_xml(
         "A",
         amount = 1,
         only_substance = TRUE,
         extra = ' conversionFactor="fa"'
       ),
-      sp("B", amount = 0, only_substance = TRUE)
+      sp_xml("B", amount = 0, only_substance = TRUE)
     ),
-    parameters = paste0(par("fa", 2), par("fm", 3)),
+    parameters = paste0(par_xml("fa", 2), par_xml("fm", 3)),
     reactions = rxn("r", 1, reactants = "A", products = "B"),
     model_attrs = ' conversionFactor="fm"'
   )
@@ -104,8 +104,8 @@ test_that("conversion factors multiply the change, species before model", {
 
 test_that("a species reference id stands for its stoichiometry", {
   doc <- model_doc(
-    species = sp("A", amount = 1, only_substance = TRUE),
-    parameters = par("n", 3, constant = FALSE),
+    species = sp_xml("A", amount = 1, only_substance = TRUE),
+    parameters = par_xml("n", 3, constant = FALSE),
     rules = rule("assignment", "sA", quote(n * 2)),
     reactions = paste0(
       '<reaction id="r" reversible="false"><listOfReactants>',
@@ -124,7 +124,7 @@ test_that("a species reference id stands for its stoichiometry", {
 
 test_that("a species reference without stoichiometry is a derive error", {
   doc <- model_doc(
-    species = sp("A", amount = 1),
+    species = sp_xml("A", amount = 1),
     reactions = paste0(
       '<reaction id="r" reversible="false"><listOfReactants>',
       '<speciesReference species="A" constant="true"/>',
@@ -141,9 +141,9 @@ test_that("a species reference without stoichiometry is a derive error", {
 test_that("assignment rules are ordered by dependency", {
   eq <- odes(
     parameters = paste0(
-      par("a", constant = FALSE),
-      par("b", constant = FALSE),
-      par("k", 2)
+      par_xml("a", constant = FALSE),
+      par_xml("b", constant = FALSE),
+      par_xml("k", 2)
     ),
     rules = paste0(
       rule("assignment", "a", quote(b + 1)),
@@ -156,7 +156,10 @@ test_that("assignment rules are ordered by dependency", {
 
 test_that("an assignment cycle is a derive error naming its ids", {
   doc <- model_doc(
-    parameters = paste0(par("a", constant = FALSE), par("b", constant = FALSE)),
+    parameters = paste0(
+      par_xml("a", constant = FALSE),
+      par_xml("b", constant = FALSE)
+    ),
     rules = paste0(
       rule("assignment", "a", quote(b)),
       rule("assignment", "b", quote(a))
@@ -169,8 +172,8 @@ test_that("an assignment cycle is a derive error naming its ids", {
 
 test_that("local parameters are inlined under unique names", {
   eq <- odes(
-    species = sp("A", amount = 1, only_substance = TRUE),
-    parameters = par("k", 99),
+    species = sp_xml("A", amount = 1, only_substance = TRUE),
+    parameters = par_xml("k", 99),
     reactions = rxn(
       "r",
       quote(k * A),
@@ -191,7 +194,7 @@ test_that("function definitions are inlined", {
       mml(quote(function(x, y) x * y + 1)),
       "</functionDefinition>"
     ),
-    parameters = paste0(par("p", constant = FALSE), par("k", 3)),
+    parameters = paste0(par_xml("p", constant = FALSE), par_xml("k", 3)),
     rules = rule("assignment", "p", quote(f(k, time)))
   )
 
@@ -201,7 +204,7 @@ test_that("function definitions are inlined", {
 test_that("rate rules make states of parameters and compartments", {
   eq <- odes(
     compartments = '<compartment id="C" size="1" constant="false"/>',
-    parameters = par("p", 0, constant = FALSE),
+    parameters = par_xml("p", 0, constant = FALSE),
     rules = paste0(rule("rate", "p", 2), rule("rate", "C", quote(p)))
   )
 
@@ -212,9 +215,9 @@ test_that("rate rules make states of parameters and compartments", {
 test_that("rateOf() is replaced by the right-hand side it names", {
   eq <- odes(
     parameters = paste0(
-      par("p", 0, constant = FALSE),
-      par("q", constant = FALSE),
-      par("k", 4)
+      par_xml("p", 0, constant = FALSE),
+      par_xml("q", constant = FALSE),
+      par_xml("k", 4)
     ),
     rules = paste0(
       rule("rate", "p", quote(k)),
@@ -228,8 +231,8 @@ test_that("rateOf() is replaced by the right-hand side it names", {
 test_that("rateOf() of a concentration integrated as an amount uses the quotient rule", {
   eq <- odes(
     compartments = '<compartment id="C" size="2" constant="false"/>',
-    species = sp("A", conc = 1),
-    parameters = par("q", constant = FALSE),
+    species = sp_xml("A", conc = 1),
+    parameters = par_xml("q", constant = FALSE),
     rules = paste0(
       rule("rate", "C", 1),
       rule("assignment", "q", quote(rateOf(A)))
@@ -241,8 +244,8 @@ test_that("rateOf() of a concentration integrated as an amount uses the quotient
 
 test_that("initial assignments and assignment rules are solved together at time 0", {
   eq <- odes(
-    species = sp("A", only_substance = TRUE),
-    parameters = paste0(par("k", 2), par("b", constant = FALSE)),
+    species = sp_xml("A", only_substance = TRUE),
+    parameters = paste0(par_xml("k", 2), par_xml("b", constant = FALSE)),
     initial = paste0(
       '<initialAssignment symbol="A">',
       mml(quote(b * 10)),
@@ -256,7 +259,7 @@ test_that("initial assignments and assignment rules are solved together at time 
 
 test_that("a missing value that is used is a derive error", {
   doc <- model_doc(
-    species = sp("A", only_substance = TRUE),
+    species = sp_xml("A", only_substance = TRUE),
     reactions = rxn("r", quote(A), reactants = "A")
   )
 
@@ -266,7 +269,7 @@ test_that("a missing value that is used is a derive error", {
 
 test_that("a rule without math has no effect", {
   eq <- odes(
-    parameters = par("p", 3, constant = FALSE),
+    parameters = par_xml("p", 3, constant = FALSE),
     rules = '<assignmentRule variable="p"/>'
   )
 
@@ -276,7 +279,7 @@ test_that("a rule without math has no effect", {
 
 test_that("a reaction without a kinetic law is a derive error", {
   doc <- model_doc(
-    species = sp("A", amount = 1),
+    species = sp_xml("A", amount = 1),
     reactions = '<reaction id="r" reversible="false"><listOfReactants><speciesReference species="A" stoichiometry="1" constant="true"/></listOfReactants></reaction>'
   )
 
@@ -286,15 +289,15 @@ test_that("a reaction without a kinetic law is a derive error", {
 
 test_that("algebraic rules, delay and fast reactions are refused", {
   algebraic <- model_doc(
-    parameters = par("p", 1, constant = FALSE),
+    parameters = par_xml("p", 1, constant = FALSE),
     rules = paste0("<algebraicRule>", mml(quote(p - 1)), "</algebraicRule>")
   )
   delay <- model_doc(
-    parameters = paste0(par("p", 1, constant = FALSE), par("q", 1)),
+    parameters = paste0(par_xml("p", 1, constant = FALSE), par_xml("q", 1)),
     rules = rule("assignment", "p", quote(delay(q, 1)))
   )
   fast <- model_doc(
-    species = sp("A", amount = 1),
+    species = sp_xml("A", amount = 1),
     reactions = '<reaction id="r" reversible="false" fast="true"/>',
     version = 1
   )
@@ -313,10 +316,10 @@ test_that("algebraic rules, delay and fast reactions are refused", {
 test_that("ids named time and pi do not clash with the csymbol and constant", {
   doc <- model_doc(
     parameters = paste0(
-      par("time", 10),
-      par("pi", 7),
-      par("a", constant = FALSE),
-      par("b", constant = FALSE)
+      par_xml("time", 10),
+      par_xml("pi", 7),
+      par_xml("a", constant = FALSE),
+      par_xml("b", constant = FALSE)
     ),
     rules = paste0(
       "<assignmentRule variable=\"a\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\">",
@@ -379,7 +382,7 @@ test_that("function definitions that call each other are a derive error", {
       lambda("f"),
       "</functionDefinition>"
     ),
-    parameters = par("p", constant = FALSE),
+    parameters = par_xml("p", constant = FALSE),
     rules = paste0(
       '<assignmentRule variable="p"><math xmlns="http://www.w3.org/1998/Math/MathML">',
       "<apply><ci>f</ci><cn>1</cn></apply></math></assignmentRule>"
@@ -397,7 +400,7 @@ test_that("calling a function with the wrong number of arguments is a derive err
       mml(quote(function(x) x)),
       "</functionDefinition>"
     ),
-    parameters = par("p", constant = FALSE),
+    parameters = par_xml("p", constant = FALSE),
     rules = paste0(
       '<assignmentRule variable="p"><math xmlns="http://www.w3.org/1998/Math/MathML">',
       "<apply><ci>f</ci><cn>1</cn><cn>2</cn></apply></math></assignmentRule>"
@@ -410,7 +413,7 @@ test_that("calling a function with the wrong number of arguments is a derive err
 
 test_that("rateOf() of its own state is a derive error", {
   m <- sbml_read(model_doc(
-    parameters = par("p", 0, constant = FALSE),
+    parameters = par_xml("p", 0, constant = FALSE),
     rules = rule("rate", "p", quote(rateOf(p) + 1))
   ))
 
@@ -419,14 +422,14 @@ test_that("rateOf() of its own state is a derive error", {
 
 test_that("rateOf() of an expression or of an assigned symbol is refused", {
   of_expression <- sbml_read(model_doc(
-    parameters = paste0(par("q", constant = FALSE), par("k", 1)),
+    parameters = paste0(par_xml("q", constant = FALSE), par_xml("k", 1)),
     rules = rule("assignment", "q", quote(rateOf(k * 2)))
   ))
   of_assigned <- sbml_read(model_doc(
     parameters = paste0(
-      par("q", constant = FALSE),
-      par("a", constant = FALSE),
-      par("k", 1)
+      par_xml("q", constant = FALSE),
+      par_xml("a", constant = FALSE),
+      par_xml("k", 1)
     ),
     rules = paste0(
       rule("assignment", "a", quote(k * time)),
@@ -444,11 +447,11 @@ test_that("rateOf() of an expression or of an assigned symbol is refused", {
 test_that("right-hand side terms follow reactions, then reactants before products", {
   eq <- odes(
     species = paste0(
-      sp("A", amount = 1, only_substance = TRUE),
-      sp("B", amount = 1, only_substance = TRUE),
-      sp("D", amount = 1, only_substance = TRUE)
+      sp_xml("A", amount = 1, only_substance = TRUE),
+      sp_xml("B", amount = 1, only_substance = TRUE),
+      sp_xml("D", amount = 1, only_substance = TRUE)
     ),
-    parameters = par("k", 1),
+    parameters = par_xml("k", 1),
     reactions = paste0(
       rxn("r1", quote(k), reactants = "A", products = "B"),
       rxn("r2", quote(k), reactants = c("B", "D"), products = "A"),
@@ -465,11 +468,11 @@ test_that("right-hand side terms follow reactions, then reactants before product
 test_that("independent assignment rules keep document order within a wave", {
   eq <- odes(
     parameters = paste0(
-      par("d", constant = FALSE),
-      par("a", constant = FALSE),
-      par("z", constant = FALSE),
-      par("b", constant = FALSE),
-      par("k", 1)
+      par_xml("d", constant = FALSE),
+      par_xml("a", constant = FALSE),
+      par_xml("z", constant = FALSE),
+      par_xml("b", constant = FALSE),
+      par_xml("k", 1)
     ),
     rules = paste0(
       rule("assignment", "d", quote(a + b)),
@@ -493,7 +496,7 @@ test_that("sort_definitions() orders waves and tolerates repeated names", {
 
 test_that("a definition that uses itself is a derive error", {
   doc <- model_doc(
-    parameters = paste0(par("a", constant = FALSE), par("k", 1)),
+    parameters = paste0(par_xml("a", constant = FALSE), par_xml("k", 1)),
     rules = rule("assignment", "a", quote(a + k))
   )
   err <- expect_error(sbml_odes(sbml_read(doc)), class = "zusbml_derive_error")
@@ -502,7 +505,7 @@ test_that("a definition that uses itself is a derive error", {
   expect_identical(found$id[found$rule == "assignment_cycle"], "a")
 
   doc <- model_doc(
-    parameters = paste0(par("a", 1, constant = FALSE), par("k", 1)),
+    parameters = paste0(par_xml("a", 1, constant = FALSE), par_xml("k", 1)),
     initial = paste0(
       '<initialAssignment symbol="a">',
       mml(quote(a + k)),
@@ -515,7 +518,7 @@ test_that("a definition that uses itself is a derive error", {
 
 test_that("a symbol defined twice is a derive error, and sbml_check() reports it", {
   doc <- model_doc(
-    parameters = paste0(par("p", constant = FALSE), par("k", 1)),
+    parameters = paste0(par_xml("p", constant = FALSE), par_xml("k", 1)),
     rules = paste0(
       rule("assignment", "p", quote(k)),
       rule("assignment", "p", quote(2 * k))
@@ -528,8 +531,8 @@ test_that("a symbol defined twice is a derive error, and sbml_check() reports it
   expect_true("p" %in% found$id[found$rule == "multiple_definitions"])
 
   doc <- model_doc(
-    species = sp("S", amount = 1),
-    parameters = par("S", 1)
+    species = sp_xml("S", amount = 1),
+    parameters = par_xml("S", 1)
   )
   err <- expect_error(
     sbml_odes(sbml_read(doc)),

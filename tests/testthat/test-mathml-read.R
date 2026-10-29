@@ -328,7 +328,7 @@ test_that("a parse error in nested math names its full path", {
   )
   for (where in names(cases)) {
     doc <- model_doc(
-      parameters = par("p", constant = FALSE),
+      parameters = par_xml("p", constant = FALSE),
       rules = paste0(
         '<assignmentRule variable="p">',
         M(cases[[where]]),

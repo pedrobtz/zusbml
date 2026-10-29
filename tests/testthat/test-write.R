@@ -8,14 +8,14 @@ test_that("reading what sbml_write() wrote gives the same model", {
       ),
       compartments = '<compartment id="C" name="cell &amp; wall" size="0.25" constant="false" metaid="mc" sboTerm="SBO:0000290"/>',
       species = paste0(
-        sp("A", conc = 1e-30),
-        sp("B", amount = 2, boundary = TRUE)
+        sp_xml("A", conc = 1e-30),
+        sp_xml("B", amount = 2, boundary = TRUE)
       ),
       parameters = paste0(
-        par("k", 0.1),
-        par("inf", "INF"),
-        par("nan", "NaN"),
-        par("p", constant = FALSE)
+        par_xml("k", 0.1),
+        par_xml("inf", "INF"),
+        par_xml("nan", "NaN"),
+        par_xml("p", constant = FALSE)
       ),
       initial = paste0(
         '<initialAssignment symbol="p">',
@@ -77,7 +77,7 @@ test_that("Level 3 Version 1 models are written as Version 2", {
 
 test_that("constraint messages and ids named time survive writing", {
   doc <- model_doc(
-    parameters = paste0(par("time", 2), par("q", constant = FALSE)),
+    parameters = paste0(par_xml("time", 2), par_xml("q", constant = FALSE)),
     rules = paste0(
       "<assignmentRule variable=\"q\"><math xmlns=\"http://www.w3.org/1998/Math/MathML\">",
       "<apply><plus/><ci>time</ci><csymbol definitionURL=\"http://www.sbml.org/sbml/symbols/time\">t</csymbol></apply>",
@@ -103,7 +103,7 @@ test_that("constraint messages and ids named time survive writing", {
 
 test_that("math with no MathML equivalent is a write error", {
   m <- sbml_read(model_doc(
-    parameters = par("p", 1, constant = FALSE),
+    parameters = par_xml("p", 1, constant = FALSE),
     rules = rule("assignment", "p", 1)
   ))
   m$rules$math[[1]] <- quote(trunc(2.5))
@@ -134,7 +134,7 @@ test_that("quotes, ampersands and angle brackets in names are escaped", {
 })
 
 test_that("text that is not well-formed XML is a write error", {
-  m <- sbml_read(model_doc(parameters = par("p", 1)))
+  m <- sbml_read(model_doc(parameters = par_xml("p", 1)))
   m$notes <- "a < b"
 
   err <- expect_error(sbml_write(m), class = "zusbml_write_error")
@@ -142,7 +142,7 @@ test_that("text that is not well-formed XML is a write error", {
 })
 
 test_that("control characters are a write error", {
-  m <- sbml_read(model_doc(parameters = par("p", 1)))
+  m <- sbml_read(model_doc(parameters = par_xml("p", 1)))
   m$parameters$name <- "a\001b"
 
   expect_error(sbml_write(m), class = "zusbml_write_error")
@@ -157,7 +157,7 @@ test_that("NA math is a write error", {
 
 test_that("ids in notes and annotation do not decide how time is read", {
   doc <- model_doc(
-    parameters = par("q", constant = FALSE),
+    parameters = par_xml("q", constant = FALSE),
     rules = paste0(
       '<assignmentRule variable="q"><math xmlns="http://www.w3.org/1998/Math/MathML">',
       '<apply><plus/><csymbol definitionURL="http://www.sbml.org/sbml/symbols/time">t</csymbol>',
@@ -182,7 +182,7 @@ test_that("ids in notes and annotation do not decide how time is read", {
 
 test_that("a fast reaction is a write error", {
   doc <- model_doc(
-    species = sp("A", amount = 1),
+    species = sp_xml("A", amount = 1),
     reactions = sub(
       'reversible="false"',
       'reversible="false" fast="true"',
