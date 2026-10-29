@@ -17,7 +17,8 @@
 #' `zusbml_write_error` for math with no MathML equivalent, naming the R
 #' call, for text with characters XML 1.0 does not allow, for notes,
 #' annotation or messages that are not well-formed XML, and for a fast
-#' reaction, which Level 3 Version 2 cannot express.
+#' reaction, which Level 3 Version 2 cannot express. `zusbml_arg_error` when
+#' `m` is not a model or `path` is neither `NULL` nor a single string.
 #' @export
 #' @examples
 #' m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))
@@ -26,6 +27,11 @@
 #' identical(sbml_read(path), m)
 sbml_write <- function(m, path = NULL) {
   check_model(m)
+  if (
+    !is.null(path) && !(is.character(path) && length(path) == 1 && !is.na(path))
+  ) {
+    abort_arg("`path` must be NULL or a single string.", "path")
+  }
   # Level 3 Version 2 has no fast attribute; dropping it would change the
   # model's meaning without a word (design D7).
   fast <- which(m$reactions$fast %in% TRUE)

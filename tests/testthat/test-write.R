@@ -116,6 +116,15 @@ test_that("sbml_write() refuses anything but a model", {
   expect_error(sbml_write(list()), class = "zusbml_arg_error")
 })
 
+test_that("sbml_write() refuses a path that is not one string", {
+  m <- sbml_read(sbml_doc(one_species()))
+
+  for (path in list(1, c("a.xml", "b.xml"), NA_character_, character(0))) {
+    err <- expect_error(sbml_write(m, path), class = "zusbml_arg_error")
+    expect_identical(err$argument, "path")
+  }
+})
+
 test_that("tabs and newlines in attribute values survive a round trip", {
   m <- sbml_read(model_doc(
     parameters = '<parameter id="p" name="a&#10;b&#9;c&#13;d" constant="true"/>'
