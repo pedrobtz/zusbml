@@ -53,7 +53,7 @@
 <li>Fifty BioModels (release 31) read, round-trip, derive and check clean.</li>
 <li>
 <code>R CMD check --as-cran</code> is clean on every r-actions leg.</li>
-</ul><p>Not built in 0.1.0: algebraic rules, <code>delay</code> and fast reactions in derivation; SBML packages; Level 1 and Level 2 before Version 4; unit checks. Performance is below the design’s targets (design §10).</p>
+</ul><p>Not built in 0.1.0: algebraic rules, <code>delay</code> and fast reactions in derivation; SBML packages; Level 1 and Level 2 before Version 4; unit checks. Reading and writing are about 3 to 4 times slower than the design’s targets; MathML conversion and derivation meet theirs (design §10).</p>
 </div>
 <div class="section level2">
 <h2 id="stage-tracking">Stage tracking<a class="anchor" aria-label="anchor" href="#stage-tracking"></a></h2>
@@ -104,7 +104,7 @@
 <ul><li>
 <a href="R/spec.R">R/spec.R</a> is the table of Level 3 core elements: each one’s attributes (type, required) and allowed children. The reader walks documents against it, so supporting a new attribute or element means one entry here, and anything absent from it is a <code>zusbml_parse_error</code>.</li>
 <li>
-<a href="R/read.R">R/read.R</a> parses with <code>zuxml</code>, settles level and version from the namespace, refuses or drops SBML packages, and turns each element into a list of typed attributes, SBase fields and children.</li>
+<a href="R/read.R">R/read.R</a> parses with <code>zuxml</code>, settles level and version from the namespace, refuses or drops SBML packages, and turns each element into a list of typed attributes, SBase fields and children. It reads the whole document once as flat vectors (<code>flat_tree()</code> in R/mathml.R: names, namespaces, attributes, children by index) and walks them; a <code>zuxml</code> call per element cost more than everything else. Keep new code on the flat tree rather than calling <code>zuxml</code> per node.</li>
 <li>
 <a href="R/mathml.R">R/mathml.R</a> turns MathML into R expressions and back. One table (<code>math_ops</code>) drives both directions; <code>math_env</code> defines the operators kept under their SBML names (design D15). The Test Suite runner checks that every expression survives R -&gt; MathML -&gt; R unchanged.</li>
 <li>

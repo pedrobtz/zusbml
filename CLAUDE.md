@@ -35,7 +35,9 @@ findings are fixed. Verified 2026-10-28:
 
 Not built in 0.1.0: algebraic rules, `delay` and fast reactions in
 derivation; SBML packages; Level 1 and Level 2 before Version 4; unit
-checks. Performance is below the design’s targets (design §10).
+checks. Reading and writing are about 3 to 4 times slower than the
+design’s targets; MathML conversion and derivation meet theirs (design
+§10).
 
 ## Stage tracking
 
@@ -120,7 +122,11 @@ semantics, validation). Built so far:
 - [R/read.R](https://pedrobtz.github.io/zusbml/R/read.R) parses with
   `zuxml`, settles level and version from the namespace, refuses or
   drops SBML packages, and turns each element into a list of typed
-  attributes, SBase fields and children.
+  attributes, SBase fields and children. It reads the whole document
+  once as flat vectors (`flat_tree()` in R/mathml.R: names, namespaces,
+  attributes, children by index) and walks them; a `zuxml` call per
+  element cost more than everything else. Keep new code on the flat tree
+  rather than calling `zuxml` per node.
 - [R/mathml.R](https://pedrobtz.github.io/zusbml/R/mathml.R) turns
   MathML into R expressions and back. One table (`math_ops`) drives both
   directions; `math_env` defines the operators kept under their SBML
