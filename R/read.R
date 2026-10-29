@@ -55,7 +55,15 @@ sbml_read <- function(x, ignore_packages = FALSE) {
   read_level(root, ctx)
   ctx$ids <- document_ids(doc)
   ctx$functions <- function_ids(doc, ctx)
-  sbml <- read_element(root, "sbml", "sbml", ctx)
+  # The whole document as flat vectors, read in a few vectorized calls; the
+  # reader walks it by index (see flat_tree()).
+  ctx$t <- flat_tree(root)
+  # Every SId-valued attribute in the document, checked in one pass.
+  values <- unlist(lapply(ctx$t$attrs, function(a) {
+    a[names(a) %in% sid_attributes]
+  }))
+  ctx$bad_sids <- unique(values[!is_sid(values)])
+  sbml <- read_element(1L, "sbml", "sbml", ctx)
   check_level_attributes(sbml, ctx)
   if (is.null(sbml$children$model)) {
     abort_parse(
@@ -241,14 +249,15 @@ package_from_ns <- function(ns) {
   ifelse(name == ns, ns, name)
 }
 
-# One element, checked against its specification. Returns its typed
-# attributes, its SBase fields, and its children: the R expression for
-# <math> (wrapped in a list, since it may be NULL), serialized text for
-# <message>, a list for listOf containers, and a parsed
+# Element i of the document's flat tree (ctx$t), checked against its
+# specification. Returns its typed attributes, its SBase fields, and its
+# children: the R expression for <math> (wrapped in a list, since it may be
+# NULL), XML text for <message>, a list for listOf containers, and a parsed
 # element for single children such as <kineticLaw>.
-read_element <- function(node, kind, path, ctx) {
+read_element <- function(i, kind, path, ctx) {
+  t <- ctx$t
   spec <- element_spec(kind, ctx$version, ctx$level)
-  attributes <- read_attributes(node, spec, path, ctx)
+  attributes <- read_attributes(NULL, spec, path, ctx, t$attrs[[i]])
 
   out <- list(
     kind = kind,
@@ -259,12 +268,9 @@ read_element <- function(node, kind, path, ctx) {
     children = list()
   )
 
-  kids <- zuxml::xml_elements(node)
-  locals <- zuxml::xml_local(kids)
-  namespaces <- zuxml::xml_ns(kids)
-  for (i in seq_along(locals)) {
-    local <- locals[[i]]
-    ns <- namespaces[[i]]
+  for (k in t$kids[[i]]) {
+    local <- t$local[[k]]
+    ns <- t$ns[[k]]
     child_path <- paste0(path, "/", local)
     if (
       !identical(ns, ctx$ns) && !(local == "math" && identical(ns, mathml_ns))
@@ -281,7 +287,7 @@ read_element <- function(node, kind, path, ctx) {
       next
     }
     if (local %in% c("notes", "annotation")) {
-      out[[local]] <- xml_content(kids[[i]])
+      out[[local]] <- xml_content(t$nodes[[k]])
       next
     }
     if (local == "math" && !identical(ns, mathml_ns)) {
@@ -308,40 +314,48 @@ read_element <- function(node, kind, path, ctx) {
         file = ctx$file
       )
     }
-    out$children[[local]] <- read_child(kids[[i]], local, child_path, ctx)
+    out$children[[local]] <- read_child(k, local, child_path, ctx)
   }
   out
 }
 
-read_child <- function(node, local, path, ctx) {
+read_child <- function(k, local, path, ctx) {
   if (local == "math") {
-    return(list(mathml_to_r(node, path, ctx$file, ctx$ids, ctx$functions)))
+    return(list(math_from_tree(
+      ctx$t,
+      k,
+      path,
+      ctx$file,
+      ctx$ids,
+      ctx$functions
+    )))
   }
   if (local == "message") {
-    return(xml_content(node))
+    return(xml_content(ctx$t$nodes[[k]]))
   }
   if (local %in% c(names(sbml_lists), names(level2_lists))) {
-    return(read_list(node, local, path, ctx))
+    return(read_list(k, local, path, ctx))
   }
-  read_element(node, local, path, ctx)
+  read_element(k, local, path, ctx)
 }
 
-read_list <- function(node, list_kind, path, ctx) {
+read_list <- function(i, list_kind, path, ctx) {
+  t <- ctx$t
   allowed <- sbml_lists[[list_kind]] %||% level2_lists[[list_kind]]
   read_attributes(
-    node,
+    NULL,
     list(attributes = sbase_attributes, section = "3.1"),
     path,
-    ctx
+    ctx,
+    t$attrs[[i]]
   )
-  kids <- zuxml::xml_elements(node)
-  locals <- zuxml::xml_local(kids)
-  namespaces <- zuxml::xml_ns(kids)
-  items <- list()
+  kids <- t$kids[[i]]
+  items <- vector("list", length(kids))
   counts <- list()
-  for (i in seq_along(locals)) {
-    local <- locals[[i]]
-    ns <- namespaces[[i]]
+  for (n in seq_along(kids)) {
+    k <- kids[[n]]
+    local <- t$local[[k]]
+    ns <- t$ns[[k]]
     if (!identical(ns, ctx$ns)) {
       note_packages(package_from_ns(ns), paste0(path, "/", local), ctx)
       next
@@ -359,26 +373,35 @@ read_list <- function(node, list_kind, path, ctx) {
         file = ctx$file
       )
     }
-    items[[length(items) + 1]] <- read_element(kids[[i]], local, item_path, ctx)
+    items[[n]] <- read_element(k, local, item_path, ctx)
   }
-  items
+  items[!vapply(items, is.null, logical(1))]
 }
 
-read_attributes <- function(node, spec, path, ctx) {
-  raw <- zuxml::xml_attrs(node)[[1]]
+# `raw` is the element's attributes when the caller already has them: a list
+# reads all its items' attributes in one call.
+read_attributes <- function(node, spec, path, ctx, raw = NULL) {
+  if (is.null(raw)) {
+    raw <- zuxml::xml_attrs(node)[[1]]
+  }
   names_raw <- names(raw) %||% character(0)
   prefixed <- grepl(":", names_raw, fixed = TRUE)
-  xml_reserved <- startsWith(names_raw, "xml:") | startsWith(names_raw, "xmlns")
-  packages <- sub(":.*$", "", names_raw[prefixed & !xml_reserved])
-  if (path != "sbml") {
-    note_packages(packages, path, ctx)
+  if (any(prefixed)) {
+    xml_reserved <- startsWith(names_raw, "xml:") |
+      startsWith(names_raw, "xmlns")
+    packages <- sub(":.*$", "", names_raw[prefixed & !xml_reserved])
+    if (path != "sbml") {
+      note_packages(packages, path, ctx)
+    }
+    raw <- raw[!prefixed]
+    names_raw <- names_raw[!prefixed]
   }
-  raw <- raw[!prefixed]
   if (ctx$level == 2L) {
-    ctx$dropped <- union(ctx$dropped, intersect(names(raw), level2_dropped))
+    ctx$dropped <- union(ctx$dropped, intersect(names_raw, level2_dropped))
   }
 
-  unknown <- setdiff(names(raw), names(spec$attributes))
+  attrs <- spec$attributes
+  unknown <- names_raw[!names_raw %in% names(attrs)]
   if (length(unknown) > 0) {
     abort_parse(
       paste0("Unknown attribute '", unknown[[1]], "'"),
@@ -389,13 +412,14 @@ read_attributes <- function(node, spec, path, ctx) {
     )
   }
 
-  values <- list()
-  for (name in names(spec$attributes)) {
-    type <- spec$attributes[[name]][[1]]
-    required <- spec$attributes[[name]][[2]]
-    value <- raw[name]
-    if (is.na(value)) {
-      if (required) {
+  at <- match(names(attrs), names_raw)
+  values <- vector("list", length(attrs))
+  names(values) <- names(attrs)
+  for (k in seq_along(attrs)) {
+    a <- attrs[[k]]
+    name <- names(attrs)[[k]]
+    if (is.na(at[[k]])) {
+      if (a[[2]]) {
         abort_parse(
           "Missing required attribute",
           path = path,
@@ -404,13 +428,31 @@ read_attributes <- function(node, spec, path, ctx) {
           file = ctx$file
         )
       }
-      default <- spec$attributes[[name]][3][[1]]
-      values[[name]] <- default %||% na_of(type)
+      values[k] <- list(a[3][[1]] %||% na_of(a[[1]]))
       next
     }
-    values[[name]] <- parse_value(value, type, path, name, spec$section, ctx)
+    values[[k]] <- parse_value(
+      raw[[at[[k]]]],
+      a[[1]],
+      path,
+      name,
+      spec$section,
+      ctx
+    )
   }
   values
+}
+
+# trimws() costs a regular expression per call; most values have no
+# surrounding whitespace, so look at the first and last character first.
+fast_trim <- function(x) {
+  space <- c(" ", "\t", "\n", "\r")
+  n <- nchar(x)
+  padded <- substr(x, 1, 1) %in% space | substr(x, n, n) %in% space
+  if (any(padded)) {
+    x[padded] <- trimws(x[padded])
+  }
+  x
 }
 
 na_of <- function(type) {
@@ -425,8 +467,8 @@ na_of <- function(type) {
 
 parse_value <- function(value, type, path, name, section, ctx) {
   value <- unname(value)
-  trimmed <- trimws(value)
-  if (type == "string" && name %in% sid_attributes && !is_sid(value)) {
+  trimmed <- if (type == "string") value else fast_trim(value)
+  if (type == "string" && name %in% sid_attributes && !known_sid(value, ctx)) {
     abort_parse(
       paste0("'", value, "' is not a valid SBML identifier"),
       path = path,
@@ -487,7 +529,13 @@ sid_attributes <- c(
   "speciesType"
 )
 
-is_sid <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*$", x)
+# sbml_read() checks every SId-valued attribute of the document at once and
+# keeps the invalid values.
+known_sid <- function(value, ctx) {
+  !value %in% ctx$bad_sids
+}
+
+is_sid <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*$", x, perl = TRUE)
 
 # XML Schema doubles: decimal or scientific notation, INF, -INF and NaN.
 parse_double <- function(x) {

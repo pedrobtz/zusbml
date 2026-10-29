@@ -57,11 +57,16 @@ sbml_write <- function(m, path = NULL) {
 # carriage return become character references, which attribute value
 # normalisation would otherwise turn into spaces.
 attr_escape <- function(x) {
-  x <- xml_escape(x)
-  x <- gsub('"', "&quot;", x, fixed = TRUE)
-  x <- gsub("\t", "&#9;", x)
-  x <- gsub("\n", "&#10;", x)
-  gsub("\r", "&#13;", x)
+  special <- grepl("[&<>\"\t\n\r\x01-\x08\x0B\x0C\x0E-\x1F]", x, perl = TRUE)
+  if (!any(special)) {
+    return(x)
+  }
+  y <- xml_escape(x[special])
+  y <- gsub('"', "&quot;", y, fixed = TRUE)
+  y <- gsub("\t", "&#9;", y)
+  y <- gsub("\n", "&#10;", y)
+  x[special] <- gsub("\r", "&#13;", y)
+  x
 }
 
 # Attribute values as text: NA is left out, logicals are true/false,

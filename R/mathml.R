@@ -78,6 +78,11 @@ math_ops <- as.data.frame(
   stringsAsFactors = FALSE
 )
 
+# The table as named vectors, for lookups that run once per MathML node.
+math_op_r <- stats::setNames(math_ops$r, math_ops$mathml)
+math_op_arity <- stats::setNames(math_ops$arity, math_ops$mathml)
+math_op_mathml <- stats::setNames(math_ops$mathml, math_ops$r)
+
 # Definitions for the operators kept under their SBML names. quotient and
 # rem follow MathML 2.0: the quotient truncates toward zero and the
 # remainder takes the sign of the dividend.
@@ -173,6 +178,7 @@ math_env <- local({
 math_context <- new.env(parent = emptyenv())
 math_context$ids <- character(0)
 math_context$functions <- character(0)
+math_context$time <- quote(time)
 
 time_name <- function(ids = math_context$ids) {
   if ("time" %in% ids) quote(.time) else quote(time)
@@ -195,64 +201,120 @@ mathml_to_r <- function(
   ids = character(0),
   functions = character(0)
 ) {
+  math_from_tree(flat_tree(node), 1L, path, file, ids, functions)
+}
+
+# The math element i of a flat tree as an R expression; the reader passes
+# the whole document's tree.
+math_from_tree <- function(t, i, path, file, ids, functions) {
   old <- as.list(math_context)
   math_context$ids <- ids
   math_context$functions <- functions
+  math_context$time <- time_name(ids)
   on.exit(list2env(old, math_context))
-  kids <- zuxml::xml_elements(node)
+  kids <- t$kids[[i]]
   if (length(kids) == 0) {
     return(NULL)
   }
   if (length(kids) > 1) {
     math_error("<math> holds more than one expression", path, file)
   }
-  mathml_node(kids[[1]], path, file)
+  mathml_node(t, kids[[1]], path, file)
+}
+
+# A subtree as flat vectors, read with a handful of vectorized zuxml calls:
+# a call per node from R costs more than the conversion itself. Element i
+# has name local[i], namespace ns[i], attributes attrs[[i]], child elements
+# kids[[i]] (indices), and for <ci>, <cn> and <csymbol> its text text[i].
+# Element 1 is the subtree's root; nodes[[i]] is the node itself, for the
+# few cases that still need it.
+flat_tree <- function(node) {
+  all <- c(node, zuxml::xml_find(node))
+  ids <- as.integer(all)
+  n <- length(ids)
+  parent <- match(as.integer(zuxml::xml_parent(all)), ids)
+  local <- zuxml::xml_local(all)
+  kids <- vector("list", n)
+  if (n > 1) {
+    by_parent <- split(seq_len(n)[-1], parent[-1])
+    kids[as.integer(names(by_parent))] <- unname(by_parent)
+  }
+  kids[vapply(kids, is.null, logical(1))] <- list(integer(0))
+  text <- rep(NA_character_, n)
+  textual <- which(local %in% c("ci", "cn", "csymbol"))
+  if (length(textual) > 0) {
+    text[textual] <- zuxml::xml_text(all[textual])
+  }
+  # <ci> names trimmed and checked as SIds in one pass, not one per name.
+  ci <- which(local == "ci")
+  name <- rep(NA_character_, n)
+  name[ci] <- fast_trim(text[ci])
+  sid <- rep(FALSE, n)
+  sid[ci] <- is_sid(name[ci])
+  list(
+    nodes = all,
+    local = local,
+    ns = zuxml::xml_ns(all),
+    attrs = zuxml::xml_attrs(all),
+    kids = kids,
+    text = text,
+    name = name,
+    sid = sid
+  )
 }
 
 math_error <- function(message, path, file) {
   abort_parse(message, path = path, section = "3.4", file = file)
 }
 
-mathml_node <- function(node, path, file) {
-  local <- zuxml::xml_local(node)
-  if (!identical(zuxml::xml_ns(node), mathml_ns)) {
+mathml_node <- function(t, i, path, file) {
+  local <- t$local[[i]]
+  if (!identical(t$ns[[i]], mathml_ns)) {
     math_error(paste0("<", local, "> is not MathML"), path, file)
   }
-  here <- paste0(path, "/", local)
+  # Paths are only for error messages: each is passed as an unevaluated
+  # argument, so it is built only if an error needs it.
   switch(
     local,
-    cn = mathml_cn(node, here, file),
-    ci = as.name(ci_name(node, here, file)),
-    csymbol = mathml_csymbol(node, here, file, applied = FALSE),
+    cn = mathml_cn(t, i, paste0(path, "/", local), file),
+    ci = as.name(ci_name(t, i, paste0(path, "/", local), file)),
+    csymbol = mathml_csymbol(
+      t,
+      i,
+      paste0(path, "/", local),
+      file,
+      applied = FALSE
+    ),
     true = TRUE,
     false = FALSE,
     notanumber = NaN,
     pi = if ("pi" %in% math_context$ids) pi else quote(pi),
     infinity = Inf,
     exponentiale = quote(exp(1)),
-    apply = mathml_apply(node, here, file),
-    piecewise = mathml_piecewise(node, here, file),
-    lambda = mathml_lambda(node, here, file),
+    apply = mathml_apply(t, i, paste0(path, "/", local), file),
+    piecewise = mathml_piecewise(t, i, paste0(path, "/", local), file),
+    lambda = mathml_lambda(t, i, paste0(path, "/", local), file),
     semantics = {
-      first <- zuxml::xml_elements(node)
+      first <- t$kids[[i]]
       if (length(first) == 0) {
-        math_error("Empty <semantics>", here, file)
+        math_error("Empty <semantics>", paste0(path, "/", local), file)
       }
-      mathml_node(first[[1]], here, file)
+      mathml_node(t, first[[1]], paste0(path, "/", local), file)
     },
     math_error(
       paste0("MathML element <", local, "> is not allowed in SBML"),
-      here,
+      paste0(path, "/", local),
       file
     )
   )
 }
 
 # The name a <ci> holds, which must be an SId (section 3.1.7): derivation
-# relies on names never starting with "." (design D16).
-ci_name <- function(node, path, file) {
-  name <- trimws(zuxml::xml_text(node))
-  if (!is_sid(name)) {
+# relies on names never starting with "." (design D16). flat_tree() has
+# trimmed and checked it.
+ci_name <- function(t, i, path, file) {
+  name <- t$name[[i]]
+  if (!t$sid[[i]]) {
     math_error(
       paste0("<ci> name '", name, "' is not a valid SBML identifier"),
       path,
@@ -262,14 +324,19 @@ ci_name <- function(node, path, file) {
   name
 }
 
-mathml_cn <- function(node, path, file) {
-  attrs <- zuxml::xml_attrs(node)[[1]]
+mathml_cn <- function(t, i, path, file) {
+  attrs <- t$attrs[[i]]
   type <- if ("type" %in% names(attrs)) attrs[["type"]] else "real"
   if ("base" %in% names(attrs) && attrs[["base"]] != "10") {
     math_error("Only base 10 numbers are supported", path, file)
   }
-  parts <- zuxml::xml_children(node)
-  texts <- trimws(zuxml::xml_text(parts[zuxml::xml_type(parts) == "text"]))
+  texts <- if (length(t$kids[[i]]) == 0) {
+    fast_trim(t$text[[i]])
+  } else {
+    # Parts separated by <sep/>: the text nodes, read from the node itself.
+    parts <- zuxml::xml_children(t$nodes[[i]])
+    trimws(zuxml::xml_text(parts[zuxml::xml_type(parts) == "text"]))
+  }
   texts <- texts[nzchar(texts)]
   number <- function(x) {
     value <- parse_double(x)
@@ -304,8 +371,8 @@ mathml_cn <- function(node, path, file) {
   )
 }
 
-csymbol_kind <- function(node, path, file) {
-  url <- zuxml::xml_attr(node, "definitionURL")
+csymbol_kind <- function(t, i, path, file) {
+  url <- unname(t$attrs[[i]]["definitionURL"])
   kind <- names(csymbol_url)[match(url, csymbol_url)]
   if (is.na(kind)) {
     math_error(paste0("Unknown csymbol '", url, "'"), path, file)
@@ -313,44 +380,44 @@ csymbol_kind <- function(node, path, file) {
   kind
 }
 
-mathml_csymbol <- function(node, path, file, applied) {
-  kind <- csymbol_kind(node, path, file)
+mathml_csymbol <- function(t, i, path, file, applied) {
+  kind <- csymbol_kind(t, i, path, file)
   if (kind %in% c("delay", "rateOf") && !applied) {
     math_error(paste0("csymbol ", kind, " must be applied"), path, file)
   }
   if (kind %in% c("time", "avogadro") && applied) {
     math_error(paste0("csymbol ", kind, " cannot be applied"), path, file)
   }
-  switch(kind, time = time_name(), avogadro = avogadro, as.name(kind))
+  switch(kind, time = math_context$time, avogadro = avogadro, as.name(kind))
 }
 
-mathml_apply <- function(node, path, file) {
-  kids <- zuxml::xml_elements(node)
+mathml_apply <- function(t, i, path, file) {
+  kids <- t$kids[[i]]
   if (length(kids) == 0) {
     math_error("Empty <apply>", path, file)
   }
   head <- kids[[1]]
-  head_name <- zuxml::xml_local(head)
+  head_name <- t$local[[head]]
   rest <- kids[-1]
-  locals <- zuxml::xml_local(rest)
+  locals <- t$local[rest]
   qualifiers <- locals %in% c("logbase", "degree")
-  args <- lapply(which(!qualifiers), function(i) {
-    mathml_node(rest[[i]], paste0(path, "[", i + 1, "]"), file)
+  args <- lapply(which(!qualifiers), function(k) {
+    mathml_node(t, rest[[k]], paste0(path, "[", k + 1, "]"), file)
   })
   qualifier <- function(name) {
     q <- rest[locals == name]
     if (length(q) == 0) {
       return(NULL)
     }
-    inner <- zuxml::xml_elements(q[[1]])
+    inner <- t$kids[[q[[1]]]]
     if (length(inner) != 1) {
       math_error(paste0("<", name, "> needs one expression"), path, file)
     }
-    mathml_node(inner[[1]], paste0(path, "/", name), file)
+    mathml_node(t, inner[[1]], paste0(path, "/", name), file)
   }
 
   if (head_name == "ci") {
-    name <- ci_name(head, path, file)
+    name <- ci_name(t, head, path, file)
     if (!name %in% math_context$functions) {
       math_error(
         paste0(
@@ -365,7 +432,7 @@ mathml_apply <- function(node, path, file) {
     return(as.call(c(as.name(name), args)))
   }
   if (head_name == "csymbol") {
-    fn <- mathml_csymbol(head, path, file, applied = TRUE)
+    fn <- mathml_csymbol(t, head, path, file, applied = TRUE)
     want <- if (identical(fn, quote(delay))) 2L else 1L
     if (length(args) != want) {
       math_error(
@@ -376,7 +443,7 @@ mathml_apply <- function(node, path, file) {
     }
     return(as.call(c(fn, args)))
   }
-  if (!identical(zuxml::xml_ns(head), mathml_ns)) {
+  if (!identical(t$ns[[head]], mathml_ns)) {
     math_error(paste0("<", head_name, "> is not MathML"), path, file)
   }
   if (head_name == "root") {
@@ -411,14 +478,18 @@ mathml_apply <- function(node, path, file) {
       file
     )
   }
-  op <- math_ops[math_ops$mathml == head_name, ]
-  if (nrow(op) == 0) {
+  if (!head_name %in% names(math_op_r)) {
     math_error(
       paste0("MathML operator <", head_name, "> is not allowed in SBML"),
       path,
       file
     )
   }
+  op <- list(
+    mathml = head_name,
+    r = math_op_r[[head_name]],
+    arity = math_op_arity[[head_name]]
+  )
   apply_op(op, args, path, file)
 }
 
@@ -504,33 +575,33 @@ apply_op <- function(op, args, path, file) {
   )
 }
 
-mathml_piecewise <- function(node, path, file) {
-  kids <- zuxml::xml_elements(node)
-  locals <- zuxml::xml_local(kids)
+mathml_piecewise <- function(t, i, path, file) {
+  kids <- t$kids[[i]]
+  locals <- t$local[kids]
   if (
     any(!locals %in% c("piece", "otherwise")) || sum(locals == "otherwise") > 1
   ) {
     math_error("<piecewise> holds only <piece> and one <otherwise>", path, file)
   }
-  pieces <- lapply(which(locals == "piece"), function(i) {
-    parts <- zuxml::xml_elements(kids[[i]])
+  pieces <- lapply(which(locals == "piece"), function(k) {
+    parts <- t$kids[[kids[[k]]]]
     if (length(parts) != 2) {
       math_error("<piece> needs a value and a condition", path, file)
     }
-    here <- paste0(path, "/piece[", i, "]")
+    here <- paste0(path, "/piece[", k, "]")
     list(
-      value = mathml_node(parts[[1]], here, file),
-      condition = mathml_node(parts[[2]], here, file)
+      value = mathml_node(t, parts[[1]], here, file),
+      condition = mathml_node(t, parts[[2]], here, file)
     )
   })
   result <- NaN
   otherwise <- which(locals == "otherwise")
   if (length(otherwise) == 1) {
-    parts <- zuxml::xml_elements(kids[[otherwise]])
+    parts <- t$kids[[kids[[otherwise]]]]
     if (length(parts) != 1) {
       math_error("<otherwise> needs one expression", path, file)
     }
-    result <- mathml_node(parts[[1]], paste0(path, "/otherwise"), file)
+    result <- mathml_node(t, parts[[1]], paste0(path, "/otherwise"), file)
   }
   for (piece in rev(pieces)) {
     result <- call("if", piece$condition, piece$value, result)
@@ -538,9 +609,9 @@ mathml_piecewise <- function(node, path, file) {
   result
 }
 
-mathml_lambda <- function(node, path, file) {
-  kids <- zuxml::xml_elements(node)
-  locals <- zuxml::xml_local(kids)
+mathml_lambda <- function(t, i, path, file) {
+  kids <- t$kids[[i]]
+  locals <- t$local[kids]
   bvars <- which(locals == "bvar")
   body <- which(locals != "bvar")
   if (length(body) != 1 || any(bvars > body)) {
@@ -548,12 +619,12 @@ mathml_lambda <- function(node, path, file) {
   }
   names <- vapply(
     bvars,
-    function(i) {
-      ci <- zuxml::xml_elements(kids[[i]])
-      if (length(ci) != 1 || zuxml::xml_local(ci) != "ci") {
+    function(k) {
+      ci <- t$kids[[kids[[k]]]]
+      if (length(ci) != 1 || t$local[[ci]] != "ci") {
         math_error("<bvar> holds one <ci>", path, file)
       }
-      ci_name(ci, path, file)
+      ci_name(t, ci, path, file)
     },
     character(1)
   )
@@ -562,7 +633,7 @@ mathml_lambda <- function(node, path, file) {
   call(
     "function",
     as.pairlist(formals),
-    mathml_node(kids[[body]], paste0(path, "/body"), file)
+    mathml_node(t, kids[[body]], paste0(path, "/body"), file)
   )
 }
 
@@ -571,9 +642,10 @@ mathml_lambda <- function(node, path, file) {
 # The <math> element for an R expression, as text. A call outside the table
 # is a zusbml_write_error naming it (design section 8).
 r_to_mathml <- function(expr, ids = character(0)) {
-  old <- math_context$ids
+  old <- as.list(math_context)
   math_context$ids <- ids
-  on.exit(math_context$ids <- old)
+  math_context$time <- time_name(ids)
+  on.exit(list2env(old, math_context))
   paste0('<math xmlns="', mathml_ns, '">', r_node(expr), "</math>")
 }
 
@@ -602,7 +674,7 @@ r_node <- function(expr) {
     if (name == "pi" && !"pi" %in% math_context$ids) {
       return(tag("pi"))
     }
-    if (identical(expr, time_name())) {
+    if (identical(expr, math_context$time)) {
       return(paste0(
         '<csymbol encoding="text" definitionURL="',
         csymbol_url[["time"]],
@@ -684,9 +756,8 @@ r_call <- function(expr) {
       "</apply>"
     ))
   }
-  op <- math_ops[math_ops$r == name, ]
-  if (nrow(op) == 1) {
-    return(apply_tag(op$mathml, nodes()))
+  if (name %in% names(math_op_mathml)) {
+    return(apply_tag(math_op_mathml[[name]], nodes()))
   }
   if (name %in% names(base_only_functions())) {
     abort_write(
@@ -804,15 +875,22 @@ format_double <- function(x) {
 # Text escaped for XML. Characters XML 1.0 does not allow at all (most
 # control characters) cannot be written.
 xml_escape <- function(x) {
-  if (any(grepl("[\x01-\x08\x0B\x0C\x0E-\x1F]", x, perl = TRUE))) {
+  # Most text needs no escaping; one check finds what does.
+  special <- grepl("[&<>\x01-\x08\x0B\x0C\x0E-\x1F]", x, perl = TRUE)
+  if (!any(special)) {
+    return(x)
+  }
+  if (any(grepl("[\x01-\x08\x0B\x0C\x0E-\x1F]", x[special], perl = TRUE))) {
     abort_write(
       "Text with a control character cannot be written as XML 1.0.",
       "text"
     )
   }
-  x <- gsub("&", "&amp;", x, fixed = TRUE)
-  x <- gsub("<", "&lt;", x, fixed = TRUE)
-  gsub(">", "&gt;", x, fixed = TRUE)
+  y <- x[special]
+  y <- gsub("&", "&amp;", y, fixed = TRUE)
+  y <- gsub("<", "&lt;", y, fixed = TRUE)
+  x[special] <- gsub(">", "&gt;", y, fixed = TRUE)
+  x
 }
 
 #' Show model math as R code
