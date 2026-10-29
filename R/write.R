@@ -17,7 +17,8 @@
 #' `zusbml_write_error` for math with no MathML equivalent, naming the R
 #' call, for text with characters XML 1.0 does not allow, for notes,
 #' annotation or messages that are not well-formed XML, and for a fast
-#' reaction, which Level 3 Version 2 cannot express.
+#' reaction, which Level 3 Version 2 cannot express. `zusbml_arg_error` when
+#' `m` is not a model or `path` is neither `NULL` nor a single string.
 #' @export
 #' @examples
 #' m <- sbml_read(system.file("extdata", "decay.xml", package = "zusbml"))
@@ -26,6 +27,11 @@
 #' identical(sbml_read(path), m)
 sbml_write <- function(m, path = NULL) {
   check_model(m)
+  if (
+    !is.null(path) && !(is.character(path) && length(path) == 1 && !is.na(path))
+  ) {
+    abort_arg("`path` must be NULL or a single string.", "path")
+  }
   # Level 3 Version 2 has no fast attribute; dropping it would change the
   # model's meaning without a word (design D7).
   fast <- which(m$reactions$fast %in% TRUE)
@@ -71,36 +77,34 @@ sbml_write <- function(m, path = NULL) {
 # carriage return become character references, which attribute value
 # normalisation would otherwise turn into spaces.
 attr_escape <- function(x) {
-  special <- grepl("[&<>\"\t\n\r\x01-\x08\x0B\x0C\x0E-\x1F]", x, perl = TRUE)
+  special <- grepl(paste0("[&<>\"\t\n\r", xml_control, "]"), x, perl = TRUE)
   if (!any(special)) {
     return(x)
   }
   y <- xml_escape(x[special])
   y <- gsub('"', "&quot;", y, fixed = TRUE)
-  y <- gsub("\t", "&#9;", y)
-  y <- gsub("\n", "&#10;", y)
-  x[special] <- gsub("\r", "&#13;", y)
+  y <- gsub("\t", "&#9;", y, fixed = TRUE)
+  y <- gsub("\n", "&#10;", y, fixed = TRUE)
+  x[special] <- gsub("\r", "&#13;", y, fixed = TRUE)
   x
 }
 
 # Attribute values as text: NA is left out, logicals are true/false,
 # doubles use the shortest text that reads back the same.
 attr_text <- function(x) {
-  if (length(x) == 0 || is.null(x) || is.na(x)) {
-    if (!(is.double(x) && length(x) == 1 && is.nan(x))) {
-      return(NA_character_)
-    }
+  if (length(x) == 0) {
+    return(NA_character_)
+  }
+  if (is.double(x) && is.nan(x)) {
+    return("NaN")
+  }
+  if (is.na(x)) {
+    return(NA_character_)
   }
   if (is.logical(x)) {
     return(if (x) "true" else "false")
   }
-  if (is.integer(x)) {
-    return(as.character(x))
-  }
   if (is.double(x)) {
-    if (is.nan(x)) {
-      return("NaN")
-    }
     if (is.infinite(x)) {
       return(if (x > 0) "INF" else "-INF")
     }
@@ -112,13 +116,12 @@ attr_text <- function(x) {
 element <- function(tag, attrs = character(0), ...) {
   attrs <- vapply(as.list(attrs), attr_text, character(1))
   attrs <- attrs[!is.na(attrs)]
-  open <- paste0(
-    "<",
-    tag,
-    paste0(" ", names(attrs), '="', attr_escape(attrs), '"', collapse = "")
-  )
-  if (length(attrs) == 0) {
-    open <- paste0("<", tag)
+  open <- paste0("<", tag)
+  if (length(attrs) > 0) {
+    open <- paste0(
+      open,
+      paste0(" ", names(attrs), '="', attr_escape(attrs), '"', collapse = "")
+    )
   }
   body <- paste(unlist(list(...)), collapse = "")
   if (!nzchar(body)) {

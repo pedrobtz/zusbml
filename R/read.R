@@ -82,22 +82,24 @@ sbml_read <- function(x, ignore_packages = FALSE) {
 # the model's function definitions. Notes, annotation and elements of other
 # namespaces are not walked: an XHTML id="time" in <notes> declares nothing.
 # One pass per depth over the flat tree.
-declared_ids <- function(t, ns) {
+declared_ids <- function(tree, ns) {
   id_of <- function(i) {
-    unlist(lapply(t$attrs[i], function(a) a[names(a) == "id"]))
+    unlist(lapply(tree$attrs[i], function(a) a[names(a) == "id"]))
   }
   ids <- id_of(1L)
   functions <- character(0)
   level <- 1L
   while (length(level) > 0) {
-    kids <- unlist(t$kids[level])
+    kids <- unlist(tree$kids[level])
     kids <- kids[
-      t$ns[kids] %in% ns & !t$local[kids] %in% c("notes", "annotation")
+      tree$ns[kids] %in% ns & !tree$local[kids] %in% c("notes", "annotation")
     ]
     ids <- c(ids, id_of(kids))
-    lists <- level[t$local[level] == "listOfFunctionDefinitions"]
-    defs <- unlist(t$kids[lists])
-    defs <- defs[t$ns[defs] %in% ns & t$local[defs] == "functionDefinition"]
+    lists <- level[tree$local[level] == "listOfFunctionDefinitions"]
+    defs <- unlist(tree$kids[lists])
+    defs <- defs[
+      tree$ns[defs] %in% ns & tree$local[defs] == "functionDefinition"
+    ]
     functions <- c(functions, id_of(defs))
     level <- kids
   }
@@ -115,8 +117,7 @@ function_ids <- function(ids) {
       paste0(
         "Function definition '",
         clash[[1]],
-        "' has the name of a built-in ",
-        "function, which zusbml cannot tell apart from it."
+        "' has the name of a built-in function, which zusbml cannot tell apart from it."
       ),
       construct = "functionDefinition",
       id = clash[[1]],
@@ -190,8 +191,7 @@ read_level <- function(root, ctx) {
       paste0(
         "SBML Level ",
         sub("\\.", " Version ", level),
-        " documents are not supported; zusbml reads Level 3 and Level 2 ",
-        "Versions 4 and 5."
+        " documents are not supported; zusbml reads Level 3 and Level 2 Versions 4 and 5."
       ),
       construct = paste0("SBML Level ", level)
     )
@@ -249,8 +249,7 @@ note_packages <- function(packages, path, ctx) {
         paste0("'", packages, "'", collapse = ", "),
         " not supported (at ",
         path,
-        "). ",
-        "Use `ignore_packages = TRUE` to read the core model only."
+        "). Use `ignore_packages = TRUE` to read the core model only."
       ),
       construct = "SBML package",
       package = packages
@@ -270,9 +269,9 @@ package_from_ns <- function(ns) {
 # NULL), XML text for <message>, a list for listOf containers, and a parsed
 # element for single children such as <kineticLaw>.
 read_element <- function(i, kind, path, ctx) {
-  t <- ctx$t
+  tree <- ctx$t
   spec <- element_spec(kind, ctx$version, ctx$level)
-  attributes <- read_attributes(NULL, spec, path, ctx, t$attrs[[i]])
+  attributes <- read_attributes(tree$attrs[[i]], spec, path, ctx)
 
   out <- list(
     kind = kind,
@@ -283,9 +282,9 @@ read_element <- function(i, kind, path, ctx) {
     children = list()
   )
 
-  for (k in t$kids[[i]]) {
-    local <- t$local[[k]]
-    ns <- t$ns[[k]]
+  for (k in tree$kids[[i]]) {
+    local <- tree$local[[k]]
+    ns <- tree$ns[[k]]
     child_path <- paste0(path, "/", local)
     if (
       !identical(ns, ctx$ns) && !(local == "math" && identical(ns, mathml_ns))
@@ -302,7 +301,7 @@ read_element <- function(i, kind, path, ctx) {
       next
     }
     if (local %in% c("notes", "annotation")) {
-      out[[local]] <- xml_content(t$nodes[[k]])
+      out[[local]] <- xml_content(tree$nodes[[k]])
       next
     }
     if (local == "math" && !identical(ns, mathml_ns)) {
@@ -355,22 +354,21 @@ read_child <- function(k, local, path, ctx) {
 }
 
 read_list <- function(i, list_kind, path, ctx) {
-  t <- ctx$t
+  tree <- ctx$t
   allowed <- sbml_lists[[list_kind]] %||% level2_lists[[list_kind]]
   read_attributes(
-    NULL,
+    tree$attrs[[i]],
     list(attributes = sbase_attributes, section = "3.1"),
     path,
-    ctx,
-    t$attrs[[i]]
+    ctx
   )
-  kids <- t$kids[[i]]
+  kids <- tree$kids[[i]]
   items <- vector("list", length(kids))
   counts <- list()
   for (n in seq_along(kids)) {
     k <- kids[[n]]
-    local <- t$local[[k]]
-    ns <- t$ns[[k]]
+    local <- tree$local[[k]]
+    ns <- tree$ns[[k]]
     if (!identical(ns, ctx$ns)) {
       if (is.na(ns)) {
         abort_parse(
@@ -401,12 +399,9 @@ read_list <- function(i, list_kind, path, ctx) {
   items[!vapply(items, is.null, logical(1))]
 }
 
-# `raw` is the element's attributes when the caller already has them: a list
-# reads all its items' attributes in one call.
-read_attributes <- function(node, spec, path, ctx, raw = NULL) {
-  if (is.null(raw)) {
-    raw <- zuxml::xml_attrs(node)[[1]]
-  }
+# `raw` is the element's attributes from the flat tree, a named character
+# vector.
+read_attributes <- function(raw, spec, path, ctx) {
   names_raw <- names(raw) %||% character(0)
   prefixed <- grepl(":", names_raw, fixed = TRUE)
   if (any(prefixed)) {
@@ -491,7 +486,9 @@ na_of <- function(type) {
 parse_value <- function(value, type, path, name, section, ctx) {
   value <- unname(value)
   trimmed <- if (type == "string") value else fast_trim(value)
-  if (type == "string" && name %in% sid_attributes && !known_sid(value, ctx)) {
+  # sbml_read() checks every SId-valued attribute of the document at once and
+  # keeps the invalid values.
+  if (type == "string" && name %in% sid_attributes && value %in% ctx$bad_sids) {
     abort_parse(
       paste0("'", value, "' is not a valid SBML identifier"),
       path = path,
@@ -552,12 +549,6 @@ sid_attributes <- c(
   "speciesType"
 )
 
-# sbml_read() checks every SId-valued attribute of the document at once and
-# keeps the invalid values.
-known_sid <- function(value, ctx) {
-  !value %in% ctx$bad_sids
-}
-
 # \\z, not $: PCRE's $ also matches before a final newline.
 is_sid <- function(x) grepl("^[A-Za-z_][A-Za-z0-9_]*\\z", x, perl = TRUE)
 
@@ -576,5 +567,3 @@ parse_double <- function(x) {
     }
   )
 }
-
-`%||%` <- function(x, y) if (is.null(x)) y else x

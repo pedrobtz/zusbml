@@ -10,16 +10,16 @@
 # cannot be changed by an event.
 derive_events <- function(m, roles, rhs, assignments) {
   ev <- m$events
+  fix <- function(expr) {
+    if (is.null(expr)) {
+      NULL
+    } else {
+      replace_rate_of(expr, rhs, roles, assignments)
+    }
+  }
   out <- vector("list", nrow(ev))
   for (i in seq_len(nrow(ev))) {
     id <- ev$id[[i]] %|% paste0("event ", i)
-    fix <- function(expr) {
-      if (is.null(expr)) {
-        NULL
-      } else {
-        replace_rate_of(expr, rhs, roles, assignments)
-      }
-    }
     a <- ev$assignments[[i]]
     keep <- !vapply(a$math, is.null, logical(1))
     targets <- a$variable[keep]
