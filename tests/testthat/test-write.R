@@ -154,3 +154,48 @@ test_that("NA math is a write error", {
   err <- expect_error(r_to_mathml(NA_real_), class = "zusbml_write_error")
   expect_equal(err$construct, "NA")
 })
+
+test_that("ids in notes and annotation do not decide how time is read", {
+  doc <- model_doc(
+    parameters = par("q", constant = FALSE),
+    rules = paste0(
+      '<assignmentRule variable="q"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      '<apply><plus/><csymbol definitionURL="http://www.sbml.org/sbml/symbols/time">t</csymbol>',
+      "<pi/></apply></math></assignmentRule>"
+    )
+  )
+  doc <- sub(
+    "<model>",
+    paste0(
+      '<model><notes><body xmlns="http://www.w3.org/1999/xhtml">',
+      '<p id="time">x</p><p id="pi">y</p></body></notes>',
+      '<annotation><x:a xmlns:x="urn:x" id="time"/></annotation>'
+    ),
+    doc,
+    fixed = TRUE
+  )
+  m <- sbml_read(doc)
+
+  expect_identical(sbml_rules(m)$math[[1]], quote(time + pi))
+  expect_identical(sbml_read(sbml_write(m)), m)
+})
+
+test_that("a fast reaction is a write error", {
+  doc <- model_doc(
+    species = sp("A", amount = 1),
+    reactions = sub(
+      'reversible="false"',
+      'reversible="false" fast="true"',
+      rxn("r", 1, reactants = "A"),
+      fixed = TRUE
+    ),
+    version = 1
+  )
+  m <- sbml_read(doc)
+
+  err <- expect_error(sbml_write(m), class = "zusbml_write_error")
+  expect_equal(err$construct, "fast reaction")
+
+  m <- sbml_read(sub('fast="true"', 'fast="false"', doc, fixed = TRUE))
+  expect_type(sbml_write(m), "character")
+})

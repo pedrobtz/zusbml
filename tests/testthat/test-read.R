@@ -239,3 +239,44 @@ test_that("a directory is refused before reading", {
   )
   expect_equal(err$argument, "x")
 })
+
+test_that("only listOfFunctionDefinitions declares functions math may call", {
+  doc <- model_doc(
+    parameters = paste0(par("k", 1), par("p", constant = FALSE)),
+    rules = paste0(
+      '<assignmentRule variable="p"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      "<apply><ci>g</ci><ci>k</ci></apply></math></assignmentRule>"
+    )
+  )
+  doc <- sub(
+    "<model>",
+    paste0(
+      "<model><annotation>",
+      '<functionDefinition id="g"><math xmlns="http://www.w3.org/1998/Math/MathML">',
+      "<lambda><bvar><ci>x</ci></bvar><ci>x</ci></lambda></math>",
+      "</functionDefinition></annotation>"
+    ),
+    doc,
+    fixed = TRUE
+  )
+
+  err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
+  expect_match(err$path, "assignmentRule\\[1\\]/math/apply$")
+})
+
+test_that("an element in no namespace inside a list is a parse error", {
+  doc <- model_doc(
+    parameters = paste0(
+      par("k", 1),
+      '<parameter xmlns="" id="k2" constant="true"/>'
+    )
+  )
+
+  for (ignore in c(FALSE, TRUE)) {
+    err <- expect_error(
+      sbml_read(doc, ignore_packages = ignore),
+      class = "zusbml_parse_error"
+    )
+    expect_equal(err$path, "sbml/model/listOfParameters/parameter")
+  }
+})

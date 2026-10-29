@@ -291,3 +291,68 @@ test_that("a parse error in math names its path in the document", {
   expect_equal(err$path, "sbml/model/listOfRules/assignmentRule[1]/math/apply")
   expect_equal(err$section, "3.4")
 })
+
+test_that("a parse error in nested math names its full path", {
+  M <- function(x) {
+    paste0('<math xmlns="http://www.w3.org/1998/Math/MathML">', x, "</math>")
+  }
+  bad <- "<ci>.x</ci>"
+  rule_path <- "sbml/model/listOfRules/assignmentRule[1]/math/"
+  cases <- list(
+    "apply[3]/ci" = paste0("<apply><plus/><cn>1</cn>", bad, "</apply>"),
+    "apply[3]/apply[3]/ci" = paste0(
+      "<apply><plus/><cn>1</cn><apply><times/><cn>2</cn>",
+      bad,
+      "</apply></apply>"
+    ),
+    "piecewise/piece[2]/ci" = paste0(
+      "<piecewise><piece><cn>1</cn><true/></piece><piece>",
+      bad,
+      "<true/></piece></piecewise>"
+    ),
+    "piecewise/otherwise/ci" = paste0(
+      "<piecewise><piece><cn>1</cn><true/></piece><otherwise>",
+      bad,
+      "</otherwise></piecewise>"
+    ),
+    "apply/logbase/ci" = paste0(
+      "<apply><log/><logbase>",
+      bad,
+      "</logbase><cn>2</cn></apply>"
+    ),
+    "apply/degree/ci" = paste0(
+      "<apply><root/><degree>",
+      bad,
+      "</degree><cn>2</cn></apply>"
+    )
+  )
+  for (where in names(cases)) {
+    doc <- model_doc(
+      parameters = par("p", constant = FALSE),
+      rules = paste0(
+        '<assignmentRule variable="p">',
+        M(cases[[where]]),
+        "</assignmentRule>"
+      )
+    )
+    err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
+    expect_equal(err$path, paste0(rule_path, where), info = where)
+  }
+
+  doc <- model_doc(
+    functions = paste0(
+      '<functionDefinition id="f">',
+      M(paste0(
+        "<lambda><bvar><ci>x</ci></bvar><apply><plus/><ci>x</ci>",
+        bad,
+        "</apply></lambda>"
+      )),
+      "</functionDefinition>"
+    )
+  )
+  err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
+  expect_equal(
+    err$path,
+    "sbml/model/listOfFunctionDefinitions/functionDefinition[1]/math/lambda/body/apply[3]/ci"
+  )
+})
