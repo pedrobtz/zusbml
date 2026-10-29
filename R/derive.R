@@ -396,7 +396,7 @@ map_math <- function(m, f) {
 # ---- Symbols and roles -----------------------------------------------------
 
 species_reference_rows <- function(m) {
-  side <- function(name, rank) {
+  side <- function(name) {
     tabs <- m$reactions[[name]]
     n <- vapply(tabs, nrow, integer(1))
     col <- function(field, proto) {
@@ -409,13 +409,17 @@ species_reference_rows <- function(m) {
       id = col("id", character()),
       stoichiometry = col("stoichiometry", double()),
       constant = col("constant", logical()),
-      # Per reaction, reactants then products, each in document order.
-      .order = rep(seq_along(n), n) * 2 + rank + sequence(n) / (max(n, 0) + 1),
       stringsAsFactors = FALSE
     )
   }
-  out <- rbind(side("reactants", 0), side("products", 1))
-  out <- out[order(out$.order), setdiff(names(out), ".order")]
+  sides <- c("reactants", "products")
+  n <- lapply(sides, function(name) vapply(m$reactions[[name]], nrow, 1L))
+  out <- rbind(side(sides[[1]]), side(sides[[2]]))
+  # Per reaction, reactants then products, each in document order.
+  reaction <- unlist(lapply(n, function(k) rep(seq_along(k), k)))
+  rank <- rep(seq_along(n), vapply(n, sum, 1L))
+  position <- unlist(lapply(n, sequence))
+  out <- out[order(reaction, rank, position), ]
   rownames(out) <- NULL
   out
 }
