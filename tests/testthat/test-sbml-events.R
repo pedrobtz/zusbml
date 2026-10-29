@@ -165,25 +165,27 @@ test_that("an event assigning a concentration and its compartment uses the old s
   expect_equal(out$S[[2]], 3 * 1 / 4)
 })
 
-test_that("an event cannot assign a constant or a rule's variable", {
-  constant <- with_events(
+test_that("an event cannot assign a constant", {
+  m <- sbml_read(with_events(
     model_doc(parameters = par_xml("k", 1)),
     evt("e", quote(time >= 1), list(k = 2))
-  )
-  ruled <- with_events(
+  ))
+
+  err <- expect_error(sbml_odes(m), class = "zusbml_derive_error")
+  expect_equal(err$ids, c("e", "k"))
+})
+
+test_that("an event cannot assign a rule's variable", {
+  m <- sbml_read(with_events(
     model_doc(
       parameters = paste0(par_xml("q", constant = FALSE), par_xml("k", 1)),
       rules = rule("assignment", "q", quote(k))
     ),
     evt("e", quote(time >= 1), list(q = 2))
-  )
+  ))
 
-  err <- expect_error(
-    sbml_odes(sbml_read(constant)),
-    class = "zusbml_derive_error"
-  )
-  expect_equal(err$ids, c("e", "k"))
-  expect_error(sbml_odes(sbml_read(ruled)), class = "zusbml_derive_error")
+  err <- expect_error(sbml_odes(m), class = "zusbml_derive_error")
+  expect_equal(err$ids, c("e", "q"))
 })
 
 test_that("an event without a trigger never fires", {

@@ -8,7 +8,30 @@ test_that("every MathML operator maps to its expected R function", {
     "ceiling",
     "factorial",
     "not",
-    names(ops)[26:49]
+    "sin",
+    "cos",
+    "tan",
+    "sec",
+    "csc",
+    "cot",
+    "sinh",
+    "cosh",
+    "tanh",
+    "sech",
+    "csch",
+    "coth",
+    "arcsin",
+    "arccos",
+    "arctan",
+    "arcsec",
+    "arccsc",
+    "arccot",
+    "arcsinh",
+    "arccosh",
+    "arctanh",
+    "arcsech",
+    "arccsch",
+    "arccoth"
   )
 
   expect_setequal(names(ops), math_ops$mathml)

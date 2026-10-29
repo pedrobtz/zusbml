@@ -17,8 +17,9 @@ test_that("derived math is evaluated without access to base R", {
   math_env <- utils::getFromNamespace("math_env", "zusbml")
   env <- new.env(parent = math_env)
 
-  expect_error(eval(quote(Sys.getenv("HOME")), env), "could not find function")
-  expect_error(eval(quote(T), env), "not found")
+  expect_false(exists("Sys.getenv", envir = env))
+  expect_false(exists("T", envir = env))
+  expect_false(exists("eval", envir = env))
   expect_equal(eval(quote(sqrt(4) + pi), env), 2 + pi)
 })
 
@@ -82,7 +83,6 @@ test_that("inlining nested function definitions is bounded", {
     "</functionDefinition>"
   )
   for (k in 2:30) {
-    body <- call(paste0("f", k - 1), call(paste0("f", k - 1), quote(x)))
     defs <- paste0(
       defs,
       '<functionDefinition id="f',
