@@ -58,22 +58,20 @@ new_sbml_model <- function(sbml, ctx) {
 # atomic prototype gives a typed column (and the right type with no rows),
 # list() gives a list column.
 table_of <- function(rows, columns) {
-  out <- data.frame(row.names = seq_along(rows))
-  for (name in names(columns)) {
+  out <- lapply(names(columns), function(name) {
     proto <- columns[[name]]
-    values <- lapply(rows, function(row) row[[name]])
-    out[[name]] <- if (is.list(proto)) {
-      values
-    } else {
-      vapply(
-        values,
-        function(v) if (is.null(v)) proto[NA_integer_] else v,
-        proto[NA_integer_]
-      )
+    values <- lapply(rows, `[[`, name)
+    if (is.list(proto)) {
+      return(values)
     }
-  }
-  rownames(out) <- NULL
-  out
+    missing <- vapply(values, is.null, logical(1))
+    values[missing] <- list(proto[NA_integer_])
+    unlist(values, use.names = FALSE) %||% proto
+  })
+  names(out) <- names(columns)
+  # Built directly: data.frame() and column assignment cost more than the
+  # rest of reading for the many small tables (a reaction's reactants).
+  structure(out, class = "data.frame", row.names = .set_row_names(length(rows)))
 }
 
 sbase_columns <- list(

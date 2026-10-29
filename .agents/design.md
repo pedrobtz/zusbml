@@ -290,18 +290,22 @@ Reading is `zuxml` plus R list building; the targets keep the package
 usable on BioModels and the Test Suite, and say what the §14 C reader
 would buy.
 
-| Operation | Target | Measured 2026-10-28 (Stage 7) |
-| --- | --- | --- |
-| read a 1 MB curated BioModels document | under 300 ms | 3.1 s per MB |
-| read every Level 3 Version 2 Test Suite file | under 90 s | 26 s |
-| MathML to R, 10⁵ nodes | under 1 s | 12.3 s |
-| `sbml_odes()` on a 500-reaction model | under 500 ms | 1.5 s |
-| write and re-read a 1 MB document | under 600 ms | 4.0 s per MB |
+| Operation | Target | Stage 7 (2026-10-28) | 0.1.0 (2026-10-29) |
+| --- | --- | --- | --- |
+| read a 1 MB BioModels document | under 300 ms | 3.1 s per MB | 0.85 s per MB |
+| read every L3V2 Test Suite file | under 90 s | 26 s | under 26 s |
+| MathML to R, 10⁵ nodes | under 1 s | 12.3 s | 1.0 s |
+| `sbml_odes()` on a 500-reaction model | under 500 ms | 1.5 s | 0.36 s |
+| write and re-read 1 MB | under 600 ms | 4.0 s per MB | 1.5 s per MB |
 
-Only the Test Suite target is met. The cost is per-node calls into `zuxml`
-from R; the §14 C reader on `zuxml`'s streaming API is the route to the
-targets (measured on a 6-core laptop, the 0.49 MB `BIOMD0000000183` and a
-generated 500-reaction model).
+Measured on a 6-core laptop with the installed package, on the 0.49 MB
+`BIOMD0000000183` and a generated 500-reaction model. Before 0.1.0 the
+reader was changed to read each document as flat vectors in a few
+vectorized `zuxml` calls and walk them by index (it made about 20,000 calls
+per document), MathML too; derivation lost its quadratic table building.
+Reading and writing remain above target; the cost left is in R per element
+(attribute parsing, building the model's tables), and the §14 C reader on
+`zuxml`'s streaming API is the route to the targets.
 
 ## 11. Roadmap
 

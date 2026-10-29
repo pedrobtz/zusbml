@@ -339,34 +339,28 @@ map_math <- function(m, f) {
 # ---- Symbols and roles -----------------------------------------------------
 
 species_reference_rows <- function(m) {
-  rows <- list()
-  for (i in seq_len(nrow(m$reactions))) {
-    for (side in c("reactants", "products")) {
-      refs <- m$reactions[[side]][[i]]
-      for (j in seq_len(nrow(refs))) {
-        rows[[length(rows) + 1]] <- data.frame(
-          reaction = m$reactions$id[[i]],
-          side = side,
-          species = refs$species[[j]],
-          id = refs$id[[j]],
-          stoichiometry = refs$stoichiometry[[j]],
-          constant = refs$constant[[j]],
-          stringsAsFactors = FALSE
-        )
-      }
+  side <- function(name, rank) {
+    tabs <- m$reactions[[name]]
+    n <- vapply(tabs, nrow, integer(1))
+    col <- function(field, proto) {
+      unlist(lapply(tabs, `[[`, field), use.names = FALSE) %||% proto
     }
+    data.frame(
+      reaction = rep(m$reactions$id, n),
+      side = rep(name, sum(n)),
+      species = col("species", character()),
+      id = col("id", character()),
+      stoichiometry = col("stoichiometry", double()),
+      constant = col("constant", logical()),
+      # Per reaction, reactants then products, each in document order.
+      .order = rep(seq_along(n), n) * 2 + rank + sequence(n) / (max(n, 0) + 1),
+      stringsAsFactors = FALSE
+    )
   }
-  if (length(rows) == 0) {
-    return(data.frame(
-      reaction = character(),
-      side = character(),
-      species = character(),
-      id = character(),
-      stoichiometry = double(),
-      constant = logical()
-    ))
-  }
-  do.call(rbind, rows)
+  out <- rbind(side("reactants", 0), side("products", 1))
+  out <- out[order(out$.order), setdiff(names(out), ".order")]
+  rownames(out) <- NULL
+  out
 }
 
 # One row per model symbol that has a value: its kind, whether it is
@@ -437,62 +431,68 @@ symbol_roles <- function(m, symbols) {
   sp <- m$species
   spatial <- stats::setNames(comps$spatial_dimensions, comps$id)
   varying <- comps$id[!comps$constant]
+  by_amount <- stats::setNames(
+    vapply(
+      seq_len(nrow(sp)),
+      function(i) {
+        !species_is_amount(sp[i, ], spatial) && sp$compartment[[i]] %in% varying
+      },
+      logical(1)
+    ),
+    sp$id
+  )
 
-  rows <- list()
-  add <- function(name, symbol, kind, role) {
-    rows[[length(rows) + 1]] <<- data.frame(
-      name = name,
-      symbol = symbol,
-      kind = kind,
-      role = role,
-      stringsAsFactors = FALSE
-    )
+  # Grown as vectors: one data frame per symbol was most of the cost.
+  name <- symbol <- kind <- role <- vector("list", nrow(symbols))
+  add <- function(i, n, s, k, r) {
+    name[[i]] <<- c(name[[i]], n)
+    symbol[[i]] <<- c(symbol[[i]], s)
+    kind[[i]] <<- c(kind[[i]], k)
+    role[[i]] <<- c(role[[i]], r)
   }
   for (i in seq_len(nrow(symbols))) {
     id <- symbols$id[[i]]
-    kind <- symbols$kind[[i]]
+    k <- symbols$kind[[i]]
     if (id %in% assigned) {
-      add(id, id, kind, "assignment")
-    } else if (
-      kind == "species" && species_by_amount(id, sp, spatial, varying)
-    ) {
+      add(i, id, id, k, "assignment")
+    } else if (k == "species" && isTRUE(by_amount[id])) {
       # A concentration in a compartment that changes size: the amount is
       # what stays constant or is integrated (section 4.6.5), so an event
       # that resizes the compartment keeps it. A rate rule on the
       # concentration is converted by the product rule in state_rhs().
       amount_role <- if (isTRUE(symbols$constant[[i]])) "constant" else "state"
-      add(paste0(".amount.", id), id, kind, amount_role)
-      add(id, id, kind, "assignment")
+      add(i, paste0(".amount.", id), id, k, amount_role)
+      add(i, id, id, k, "assignment")
     } else if (id %in% rated) {
-      add(id, id, kind, "state")
+      add(i, id, id, k, "state")
     } else if (isTRUE(symbols$constant[[i]])) {
-      add(id, id, kind, "constant")
+      add(i, id, id, k, "constant")
     } else {
-      add(id, id, kind, "state")
+      add(i, id, id, k, "state")
     }
   }
-  for (i in seq_len(nrow(m$reactions))) {
-    r <- m$reactions[i, ]
-    add(r$id, r$id, "reaction", "assignment")
-    params <- r$kinetic_law[[1]]$local_parameters
-    for (p in params$id %||% character(0)) {
-      add(
-        local_name(r$id, p),
-        local_name(r$id, p),
-        "localParameter",
-        "constant"
-      )
-    }
-  }
-  if (length(rows) == 0) {
-    return(data.frame(
-      name = character(),
-      symbol = character(),
-      kind = character(),
-      role = character()
-    ))
-  }
-  do.call(rbind, rows)
+  locals <- lapply(m$reactions$kinetic_law, function(law) {
+    law$local_parameters$id %||% character(0)
+  })
+  reactions <- lapply(seq_len(nrow(m$reactions)), function(i) {
+    rid <- m$reactions$id[[i]]
+    local <- local_name(rid, locals[[i]])
+    list(
+      name = c(rid, local),
+      kind = c("reaction", rep("localParameter", length(local))),
+      role = c("assignment", rep("constant", length(local)))
+    )
+  })
+  reaction_name <- unlist(lapply(reactions, `[[`, "name"))
+  data.frame(
+    name = c(unlist(name), reaction_name) %||% character(0),
+    symbol = c(unlist(symbol), reaction_name) %||% character(0),
+    kind = c(unlist(kind), unlist(lapply(reactions, `[[`, "kind"))) %||%
+      character(0),
+    role = c(unlist(role), unlist(lapply(reactions, `[[`, "role"))) %||%
+      character(0),
+    stringsAsFactors = FALSE
+  )
 }
 
 species_by_amount <- function(id, sp, spatial, varying) {
@@ -510,6 +510,10 @@ state_rhs <- function(m, symbols, roles) {
   rate_of <- stats::setNames(rules$math, rules$variable)
   sp <- m$species
   refs <- species_reference_rows(m)
+  refs_by_species <- split(
+    refs,
+    factor(refs$species, levels = unique(refs$species))
+  )
   laws <- reaction_rates(m)
   model_cf <- m$conversion_factor
 
@@ -539,7 +543,7 @@ state_rhs <- function(m, symbols, roles) {
     change <- if (isTRUE(row$boundary_condition)) {
       0
     } else {
-      species_change(symbol, refs, laws)
+      species_change(symbol, refs_by_species[[symbol]] %||% refs[0, ], laws)
     }
     cf <- row$conversion_factor %|% (model_cf %||% NA_character_)
     if (!is.na(cf) && !identical(change, 0)) {
@@ -714,35 +718,53 @@ sort_definitions <- function(defs, what) {
     return(defs)
   }
   names_all <- names(defs)
-  deps <- lapply(defs, function(e) {
-    intersect(all.vars(e), names_all)
-  })
-  done <- character(0)
-  order <- character(0)
-  remaining <- names_all
-  while (length(remaining) > 0) {
-    ready <- remaining[vapply(
-      remaining,
-      function(n) {
-        all(setdiff(deps[[n]], n) %in% done) && !(n %in% deps[[n]])
-      },
-      logical(1)
-    )]
+  deps <- lapply(defs, function(e) intersect(all.vars(e), names_all))
+  self <- vapply(
+    seq_along(deps),
+    function(k) names_all[[k]] %in% deps[[k]],
+    logical(1)
+  )
+  # Each pass takes every definition whose dependencies are all done, in
+  # their original order; counts of outstanding dependencies avoid
+  # rescanning them.
+  outstanding <- vapply(
+    seq_along(deps),
+    function(k) {
+      length(setdiff(deps[[k]], names_all[[k]]))
+    },
+    integer(1)
+  )
+  dependents <- split(
+    rep(seq_along(deps), lengths(deps)),
+    factor(unlist(deps), levels = names_all)
+  )
+  placed <- rep(FALSE, length(defs))
+  order <- integer(0)
+  repeat {
+    ready <- which(!placed & outstanding == 0 & !self)
     if (length(ready) == 0) {
-      abort_derive(
-        paste0(
-          "The ",
-          what,
-          " for ",
-          paste(remaining, collapse = ", "),
-          " depend on each other in a cycle."
-        ),
-        remaining
-      )
+      break
     }
     order <- c(order, ready)
-    done <- c(done, ready)
-    remaining <- setdiff(remaining, ready)
+    placed[ready] <- TRUE
+    for (k in ready) {
+      users <- dependents[[names_all[[k]]]]
+      users <- users[users != k]
+      outstanding[users] <- outstanding[users] - 1L
+    }
+  }
+  if (!all(placed)) {
+    remaining <- names_all[!placed]
+    abort_derive(
+      paste0(
+        "The ",
+        what,
+        " for ",
+        paste(remaining, collapse = ", "),
+        " depend on each other in a cycle."
+      ),
+      remaining
+    )
   }
   defs[order]
 }
