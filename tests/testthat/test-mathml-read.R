@@ -425,7 +425,7 @@ test_that("a bound variable's error names the bvar", {
 
 test_that("text without an element inside <math> is a parse error", {
   doc <- model_doc(
-    parameters = par("p", constant = FALSE),
+    parameters = par_xml("p", constant = FALSE),
     rules = paste0(
       '<assignmentRule variable="p">',
       '<math xmlns="http://www.w3.org/1998/Math/MathML"> oops </math>',

@@ -6,7 +6,7 @@
 \alias{zusbml-package}
 \title{zusbml: Read, Write and Derive Equations from 'SBML' Models}
 \description{
-Reads Systems Biology Markup Language ('SBML') core documents, Level 3 Versions 1 and 2 and Level 2 Versions 4 and 5, into one R object, writes that object back as Level 3 Version 2, and derives from it the states, right-hand sides, assignments and events an ordinary differential equation solver needs, following the specification at \url{https://sbml.org/documents/specifications/}.
+Reads Systems Biology Markup Language ('SBML') core documents, Level 3 Versions 1 and 2 and Level 2 Versions 4 and 5, into one R object with a data frame per element kind. Writes that object back as valid Level 3 Version 2. Derives the states, initial values, right-hand sides, assignments and events that an ordinary differential equation solver needs, following the specification at \url{https://sbml.org/documents/specifications/}. Model math becomes R expressions that are evaluated without access to the rest of R, and constructs the package does not support are refused rather than approximated.
 }
 \section{Scope}{
 
