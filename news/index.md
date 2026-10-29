@@ -48,7 +48,9 @@
 
 - [`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
   writes a model as SBML Level 3 Version 2; reading it back gives an
-  identical model for every readable SBML Test Suite case.
+  identical model for every readable SBML Test Suite case. A fast
+  reaction, which Level 3 Version 2 cannot express, is a
+  `zusbml_write_error`.
   [`sbml_write_json()`](https://pedrobtz.github.io/zusbml/reference/sbml_write_json.md)
   writes the model object as JSON, and
   [`sbml_to_rxode2()`](https://pedrobtz.github.io/zusbml/reference/sbml_to_rxode2.md)
