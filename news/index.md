@@ -27,7 +27,8 @@
   [`sbml_functions()`](https://pedrobtz.github.io/zusbml/reference/sbml_components.md)
   adds each function definition as an R function. Math from a document
   can only call its own function definitions, and is evaluated without
-  access to the rest of R.
+  access to the rest of R. Parse errors in math name the element at
+  fault, numbered among its same-named siblings (`math/apply/ci[2]`).
 
 - [`sbml_odes()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
   derives the states, right-hand sides, assignments, constants and
