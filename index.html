@@ -67,9 +67,11 @@
 <li>
 <strong>Derivation is the point.</strong> <code><a href="reference/sbml_odes.html">sbml_odes()</a></code> gives the states, their right-hand sides, the assignments and the events as R expressions; <code><a href="reference/sbml_derivs.html">sbml_derivs()</a></code> turns them into a function for <a href="https://cran.r-project.org/package=deSolve" class="external-link">deSolve</a>, with SBML’s event semantics (delays, priorities, persistence) included.</li>
 <li>
-<strong>Checked against the SBML Test Suite.</strong> All 1,384 cases of the <a href="https://github.com/sbmlteam/sbml-test-suite" class="external-link">SBML Test Suite</a> 3.5.0 within the supported set reproduce their reference results under each case’s own tolerances. The other 308 Level 3 Version 2 cases use algebraic rules, <code>delay</code>, fast reactions or SBML packages, and are refused by name rather than approximated.</li>
+<strong>Checked against the SBML Test Suite.</strong> All 1,384 cases of the <a href="https://github.com/sbmlteam/sbml-test-suite" class="external-link">SBML Test Suite</a> 3.5.0 within the supported set reproduce their reference results under each case’s own tolerances. The other 308 Level 3 Version 2 cases use algebraic rules, <code>delay</code>, fast reactions or SBML packages, and are refused by name rather than approximated. 1,028 of the supported cases also pass when read from their Level 2 Version 5 file.</li>
 <li>
 <strong>Pure R.</strong> The only package zusbml imports is <a href="https://github.com/pedrobtz/zuxml" class="external-link">zuxml</a>, for the XML; there is no system library to install.</li>
+<li>
+<strong>Safe with documents from anywhere.</strong> Model math is evaluated in an environment built from an allowlist of base R functions, and a document can call only its own function definitions, so it cannot reach <code><a href="https://rdrr.io/r/base/system.html" class="external-link">system()</a></code> or the rest of R.</li>
 <li>
 <strong>Round trips.</strong> Reading, writing and reading again gives an identical model, for every readable Test Suite case and fifty curated BioModels.</li>
 </ul>
@@ -102,7 +104,8 @@
 <span><span class="co">#&gt;   events        1</span></span></code></pre></div>
 <p>Each kind of element is a data frame. The drug in the gut is an amount; the drug in the central compartment is a concentration.</p>
 <div class="sourceCode" id="cb5"><pre class="downlit sourceCode r">
-<code class="sourceCode R"><span><span class="fu"><a href="reference/sbml_components.html">sbml_species</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"compartment"</span>, <span class="st">"initial_amount"</span>, <span class="st">"has_only_substance_units"</span><span class="op">)</span><span class="op">]</span></span>
+<code class="sourceCode R"><span><span class="va">species</span> <span class="op">&lt;-</span> <span class="fu"><a href="reference/sbml_components.html">sbml_species</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span></span>
+<span><span class="va">species</span><span class="op">[</span>, <span class="fu"><a href="https://rdrr.io/r/base/c.html" class="external-link">c</a></span><span class="op">(</span><span class="st">"id"</span>, <span class="st">"compartment"</span>, <span class="st">"initial_amount"</span>, <span class="st">"has_only_substance_units"</span><span class="op">)</span><span class="op">]</span></span>
 <span><span class="co">#&gt;         id compartment initial_amount has_only_substance_units</span></span>
 <span><span class="co">#&gt; 1 drug_gut         gut            100                     TRUE</span></span>
 <span><span class="co">#&gt; 2     drug     central              0                    FALSE</span></span></code></pre></div>
@@ -134,10 +137,25 @@
 <span><span class="co">#&gt; 3   12 1.000006e+02 1.133898</span></span>
 <span><span class="co">#&gt; 4   18 2.478759e-01 4.075490</span></span>
 <span><span class="co">#&gt; 5   24 6.144424e-04 1.236769</span></span></code></pre></div>
-<p><code><a href="reference/sbml_write.html">sbml_write()</a></code> writes SBML Level 3 Version 2, and reading it back gives the same model. <code><a href="reference/sbml_to_rxode2.html">sbml_to_rxode2()</a></code> writes the equations for <a href="https://cran.r-project.org/package=rxode2" class="external-link">rxode2</a> instead.</p>
+<p><code><a href="reference/sbml_write.html">sbml_write()</a></code> writes SBML Level 3 Version 2, and reading it back gives the same model.</p>
 <div class="sourceCode" id="cb8"><pre class="downlit sourceCode r">
 <code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/identical.html" class="external-link">identical</a></span><span class="op">(</span><span class="fu"><a href="reference/sbml_read.html">sbml_read</a></span><span class="op">(</span><span class="fu"><a href="reference/sbml_write.html">sbml_write</a></span><span class="op">(</span><span class="va">m</span><span class="op">)</span><span class="op">)</span>, <span class="va">m</span><span class="op">)</span></span>
 <span><span class="co">#&gt; [1] TRUE</span></span></code></pre></div>
+<p><code><a href="reference/sbml_to_rxode2.html">sbml_to_rxode2()</a></code> writes the equations as <a href="https://cran.r-project.org/package=rxode2" class="external-link">rxode2</a> model text. rxode2 text cannot express SBML events, so the dose at hour 12 is refused unless you ask for it to be dropped.</p>
+<div class="sourceCode" id="cb9"><pre class="downlit sourceCode r">
+<code class="sourceCode R"><span><span class="fu"><a href="https://rdrr.io/r/base/cat.html" class="external-link">cat</a></span><span class="op">(</span><span class="fu"><a href="reference/sbml_to_rxode2.html">sbml_to_rxode2</a></span><span class="op">(</span><span class="va">m</span>, events <span class="op">=</span> <span class="st">"drop"</span><span class="op">)</span><span class="op">)</span></span>
+<span><span class="co">#&gt; # dosing, written by zusbml from SBML Level 3 Version 2</span></span>
+<span><span class="co">#&gt; gut = 1;</span></span>
+<span><span class="co">#&gt; central = 10;</span></span>
+<span><span class="co">#&gt; ka = 1;</span></span>
+<span><span class="co">#&gt; ke = 0.20000000000000001;</span></span>
+<span><span class="co">#&gt; dose = 100;</span></span>
+<span><span class="co">#&gt; drug_gut(0) = 100;</span></span>
+<span><span class="co">#&gt; drug(0) = 0;</span></span>
+<span><span class="co">#&gt; absorption = ka * drug_gut;</span></span>
+<span><span class="co">#&gt; elimination = ke * drug * central;</span></span>
+<span><span class="co">#&gt; d/dt(drug_gut) = -absorption;</span></span>
+<span><span class="co">#&gt; d/dt(drug) = (absorption - elimination)/central;</span></span></code></pre></div>
 <p>Functions are named <code>sbml_*()</code>: <code><a href="reference/sbml_read.html">sbml_read()</a></code> and <code><a href="reference/sbml_write.html">sbml_write()</a></code> for documents, an accessor per element kind, and <code><a href="reference/sbml_odes.html">sbml_odes()</a></code>, <code><a href="reference/sbml_derivs.html">sbml_derivs()</a></code> and <code><a href="reference/sbml_to_rxode2.html">sbml_to_rxode2()</a></code> for equations.</p>
 </div>
 <div class="section level2">
@@ -147,7 +165,7 @@
 <li>
 <a href="https://pedrobtz.github.io/zusbml/articles/zusbml.html">Simulating SBML models</a> walks through reading, deriving and simulating a model, with events.</li>
 <li>
-<code><a href="reference/zusbml-package.html">?zusbml</a></code> lists what is supported and what is refused.</li>
+<a href="https://pedrobtz.github.io/zusbml/reference/zusbml-package.html"><code>?zusbml</code></a> lists what is supported and what is refused.</li>
 <li>The <a href="https://pedrobtz.github.io/zusbml/reference/">reference index</a> documents every function.</li>
 </ul>
 </div>
