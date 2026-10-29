@@ -296,7 +296,7 @@ would buy.
 | read every Level 3 Version 2 Test Suite file | under 90 s | 26 s | under 26 s |
 | MathML to R, 10⁵ nodes | under 1 s | 12.3 s | 1.0 s |
 | `sbml_odes()` on a 500-reaction model | under 500 ms | 1.5 s | 0.36 s |
-| write and re-read a 1 MB document | under 600 ms | 4.0 s per MB | 1.5 s per MB |
+| write and re-read 1 MB | under 600 ms | 4.0 s per MB | 1.5 s per MB |
 
 Measured on a 6-core laptop with the installed package, on the 0.49 MB
 `BIOMD0000000183` and a generated 500-reaction model. Before 0.1.0 the
