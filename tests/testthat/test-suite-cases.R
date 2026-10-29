@@ -11,6 +11,77 @@ test_that("a Level 2 file outside the tolerances is reported", {
   expect_equal(outcome$level2, "fail: tolerances")
 })
 
+test_that("a Level 2 file that derives other equations is reported", {
+  skip_if_not_installed("deSolve")
+  dir <- withr::local_tempdir()
+  case_dir <- copy_fixture(dir)
+  l2 <- file.path(case_dir, "00000-sbml-l2v5.xml")
+  # The same rate with its factors in another order simulates the same.
+  writeLines(
+    sub(
+      "<ci> C </ci><ci> k1 </ci>",
+      "<ci> k1 </ci><ci> C </ci>",
+      readLines(l2)
+    ),
+    l2
+  )
+
+  outcome <- suite_run_case(suite_case(dir, "00000"))
+
+  expect_equal(outcome$status, "pass")
+  expect_equal(outcome$level2, "fail: equations differ in assignments")
+})
+
+test_that("suite_equation_differences() names the parts that differ", {
+  eq <- function(rhs, assignments = list(), constants = numeric(0)) {
+    list(
+      states = data.frame(name = names(rhs)),
+      rhs = rhs,
+      assignments = assignments,
+      constants = constants
+    )
+  }
+
+  same <- eq(list(S = quote(k * .time)))
+  expect_equal(
+    suite_equation_differences(same, eq(list(S = quote(k * time)))),
+    character(0)
+  )
+  expect_equal(
+    suite_equation_differences(same, eq(list(S = quote(time * k)))),
+    "rhs"
+  )
+  expect_equal(
+    suite_equation_differences(same, eq(list(T = quote(k * time)))),
+    c("states", "rhs")
+  )
+  expect_equal(
+    suite_equation_differences(
+      eq(list(S = quote(k)), list(a = 1, b = 2)),
+      eq(list(S = quote(k)), list(b = 2, a = 1))
+    ),
+    "assignments"
+  )
+  # With a symbol named time, `.time` is the csymbol and `time` is not.
+  expect_equal(
+    suite_equation_differences(
+      eq(list(S = quote(.time)), constants = c(time = 1)),
+      eq(list(S = quote(time)), constants = c(time = 1))
+    ),
+    "rhs"
+  )
+})
+
+test_that("a supported case whose model cannot be read is a read failure", {
+  dir <- withr::local_tempdir()
+  case_dir <- copy_fixture(dir)
+  writeLines("<sbml/>", file.path(case_dir, "00000-sbml-l3v2.xml"))
+
+  outcome <- suite_run_case(suite_case(dir, "00000"))
+
+  expect_equal(outcome$status, "read_fail")
+})
+
 test_that("a supported case the package refuses is a failure", {
   dir <- withr::local_tempdir()
   case_dir <- copy_fixture(dir)
@@ -22,6 +93,24 @@ test_that("a supported case the package refuses is a failure", {
     ),
     file.path(case_dir, "00000-sbml-l3v2.xml")
   )
+
+  outcome <- suite_run_case(suite_case(dir, "00000"))
+
+  expect_equal(outcome$category, "supported")
+  # The reader refuses it, so it was never read.
+  expect_equal(outcome$status, "read_fail")
+})
+
+test_that("a supported case refused after reading is a failure", {
+  dir <- withr::local_tempdir()
+  case_dir <- copy_fixture(dir)
+  path <- file.path(case_dir, "00000-sbml-l3v2.xml")
+  rule <- paste0(
+    "<listOfRules><algebraicRule>",
+    '<math xmlns="http://www.w3.org/1998/Math/MathML"><ci> k1 </ci></math>',
+    "</algebraicRule></listOfRules></model>"
+  )
+  writeLines(sub("</model>", rule, readLines(path), fixed = TRUE), path)
 
   outcome <- suite_run_case(suite_case(dir, "00000"))
 
@@ -139,5 +228,29 @@ test_that("suite_floor_failures() lowers the floors for skipped cases", {
   expect_equal(
     suite_floor_failures(report, floor, skipped = character(0)),
     c("read: 2 below the floor of 3", "pass: 2 below the floor of 3")
+  )
+})
+
+test_that("the read floor counts read cases, failing or not, and no others", {
+  floor <- list(read = 3L, pass = 1L, refused = 0L, level2 = 0L)
+  report <- function(status) {
+    data.frame(id = seq_along(status), status = status, level2 = "none")
+  }
+
+  expect_equal(
+    suite_floor_failures(
+      report(c("pass", "fail", "fail")),
+      floor,
+      character(0)
+    ),
+    character(0)
+  )
+  expect_equal(
+    suite_floor_failures(
+      report(c("pass", "fail", "read_fail", "error", "refused")),
+      floor,
+      character(0)
+    ),
+    "read: 2 below the floor of 3"
   )
 })

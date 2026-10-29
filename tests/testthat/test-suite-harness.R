@@ -113,6 +113,22 @@ test_that("suite_compare() matches non-finite values exactly", {
   ))
 })
 
+test_that("suite_compare() fails a non-finite value where one is finite", {
+  expected <- data.frame(time = 0:1, S1 = c(1, 2))
+
+  for (bad in c(NaN, Inf, NA)) {
+    expect_false(
+      suite_compare(
+        data.frame(time = 0:1, S1 = c(1, bad)),
+        expected,
+        absolute = 1,
+        relative = 1
+      ),
+      info = format(bad)
+    )
+  }
+})
+
 test_that("suite_compare() fails on a missing column or a row count mismatch", {
   expected <- data.frame(time = 0:1, S1 = c(1, 2))
 
