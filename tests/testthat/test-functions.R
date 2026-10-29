@@ -30,3 +30,19 @@ test_that("a function definition needs an id", {
   err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
   expect_equal(err$attribute, "id")
 })
+
+test_that("a function definition that is not a lambda names the file", {
+  path <- withr::local_tempfile(fileext = ".xml")
+  writeLines(
+    sbml_doc(paste0(
+      '<listOfFunctionDefinitions><functionDefinition id="f">',
+      '<math xmlns="http://www.w3.org/1998/Math/MathML"><cn>1</cn></math>',
+      "</functionDefinition></listOfFunctionDefinitions>"
+    )),
+    path
+  )
+
+  err <- expect_error(sbml_read(path), class = "zusbml_parse_error")
+  expect_identical(err$file, path)
+  expect_identical(err$section, "4.3")
+})

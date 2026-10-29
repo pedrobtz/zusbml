@@ -35,7 +35,7 @@ new_sbml_model <- function(sbml, ctx) {
         notes = sbml$notes,
         annotation = sbml$annotation
       ),
-      functions = function_table(lists$listOfFunctionDefinitions),
+      functions = function_table(lists$listOfFunctionDefinitions, ctx$file),
       unit_definitions = unit_definition_table(lists$listOfUnitDefinitions),
       compartments = compartment_table(lists$listOfCompartments),
       species = species_table(lists$listOfSpecies),
@@ -109,21 +109,22 @@ part <- function(el, ...) {
   c(list(...), list(math = math_of(el)), sbase_row(el))
 }
 
-function_table <- function(items) {
+function_table <- function(items, file) {
   rows <- lapply(items, function(el) {
     math <- math_of(el)
     if (!is.null(math) && !is_lambda(math)) {
       abort_parse(
         "A function definition's math must be a <lambda>",
         path = el$path,
-        section = "4.3"
+        section = "4.3",
+        file = file
       )
     }
     c(
       list(
         id = el$attributes$id,
         name = el$attributes$name,
-        math = math_of(el)
+        math = math
       ),
       sbase_row(el)
     )

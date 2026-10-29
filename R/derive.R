@@ -310,7 +310,7 @@ inline_functions <- function(m) {
   expand <- function(expr, depth = 0) {
     if (depth > 100) {
       abort_derive(
-        "Function definitions call each other in a cycle.",
+        "Function definitions nest too deeply or call each other in a cycle.",
         names(lambdas)
       )
     }
