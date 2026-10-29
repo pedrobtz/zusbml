@@ -136,6 +136,59 @@ test_that("constants and names read", {
   expect_identical(from_mathml("<exponentiale/>"), quote(exp(1)))
 })
 
+test_that("names and numbers lose any whitespace around them on reading", {
+  # The math of an initial assignment to p, read through sbml_read().
+  read_math <- function(math) {
+    doc <- model_doc(
+      parameters = paste0(par_xml("k", 1), par_xml("p")),
+      initial = paste0(
+        '<initialAssignment symbol="p">',
+        '<math xmlns="http://www.w3.org/1998/Math/MathML">',
+        math,
+        "</math></initialAssignment>"
+      )
+    )
+    sbml_read(doc)$initial_assignments$math[[1]]
+  }
+
+  for (ci in c(
+    "<ci>k </ci>",
+    "<ci> k</ci>",
+    "<ci>\tk\n</ci>",
+    "<ci>\r\n k\t</ci>"
+  )) {
+    expect_identical(read_math(ci), quote(k), info = ci)
+  }
+  for (cn in c("<cn>2.5 </cn>", "<cn> 2.5</cn>", "<cn>\t2.5\n</cn>")) {
+    expect_identical(read_math(cn), 2.5, info = cn)
+  }
+  for (cn in c(
+    '<cn type="e-notation">1.5 <sep/>-3</cn>',
+    '<cn type="e-notation"> 1.5<sep/> -3 </cn>',
+    '<cn type="e-notation">\t1.5\n<sep/>\n-3\t</cn>'
+  )) {
+    expect_identical(read_math(cn), 1.5e-3, info = cn)
+  }
+  expect_identical(read_math('<cn type="rational"> 1 <sep/>\t4\n</cn>'), 0.25)
+})
+
+test_that("typed attribute values lose any whitespace around them", {
+  for (value in c("1.5 ", " 1.5", " 1.5 ")) {
+    doc <- model_doc(
+      parameters = paste0(
+        '<parameter id="k" value="',
+        value,
+        '" constant="true"/>'
+      )
+    )
+    expect_identical(sbml_read(doc)$parameters$value, 1.5, info = value)
+  }
+  doc <- model_doc(
+    parameters = '<parameter id="k" value="1" constant=" false"/>'
+  )
+  expect_false(sbml_read(doc)$parameters$constant)
+})
+
 test_that("csymbols become time, the Avogadro constant, rateOf and delay", {
   url <- function(x) {
     paste0('definitionURL="http://www.sbml.org/sbml/symbols/', x, '"')
