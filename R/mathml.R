@@ -220,6 +220,9 @@ math_from_tree <- function(t, i, path, file, ids, functions) {
   on.exit(list2env(old, math_context))
   kids <- t$kids[[i]]
   if (length(kids) == 0) {
+    if (nzchar(fast_trim(zuxml::xml_text(t$nodes[[i]])))) {
+      math_error("<math> holds text but no MathML element", path, file)
+    }
     return(NULL)
   }
   if (length(kids) > 1) {
@@ -259,6 +262,7 @@ flat_tree <- function(node) {
   sid[ci] <- is_sid(name[ci])
   list(
     nodes = all,
+    parent = parent,
     local = local,
     ns = zuxml::xml_ns(all),
     attrs = zuxml::xml_attrs(all),
@@ -267,6 +271,18 @@ flat_tree <- function(node) {
     name = name,
     sid = sid
   )
+}
+
+# Element i's step in an error path: its name, indexed among same-named
+# siblings when it has any, as the reader numbers list items.
+node_step <- function(t, i) {
+  local <- t$local[[i]]
+  p <- t$parent[[i]]
+  if (is.na(p)) {
+    return(local)
+  }
+  same <- t$kids[[p]][t$local[t$kids[[p]]] == local]
+  if (length(same) == 1) local else paste0(local, "[", match(i, same), "]")
 }
 
 math_error <- function(message, path, file) {
@@ -280,14 +296,15 @@ mathml_node <- function(t, i, path, file) {
   }
   # Paths are only for error messages: each is passed as an unevaluated
   # argument, so it is built only if an error needs it.
+  delayedAssign("here", paste0(path, "/", node_step(t, i)))
   switch(
     local,
-    cn = mathml_cn(t, i, paste0(path, "/", local), file),
-    ci = as.name(ci_name(t, i, paste0(path, "/", local), file)),
+    cn = mathml_cn(t, i, here, file),
+    ci = as.name(ci_name(t, i, here, file)),
     csymbol = mathml_csymbol(
       t,
       i,
-      paste0(path, "/", local),
+      here,
       file,
       applied = FALSE
     ),
@@ -297,19 +314,19 @@ mathml_node <- function(t, i, path, file) {
     pi = if ("pi" %in% math_context$ids) pi else quote(pi),
     infinity = Inf,
     exponentiale = quote(exp(1)),
-    apply = mathml_apply(t, i, paste0(path, "/", local), file),
-    piecewise = mathml_piecewise(t, i, paste0(path, "/", local), file),
-    lambda = mathml_lambda(t, i, paste0(path, "/", local), file),
+    apply = mathml_apply(t, i, here, file),
+    piecewise = mathml_piecewise(t, i, here, file),
+    lambda = mathml_lambda(t, i, here, file),
     semantics = {
       first <- t$kids[[i]]
       if (length(first) == 0) {
-        math_error("Empty <semantics>", paste0(path, "/", local), file)
+        math_error("Empty <semantics>", here, file)
       }
-      mathml_node(t, first[[1]], paste0(path, "/", local), file)
+      mathml_node(t, first[[1]], here, file)
     },
     math_error(
       paste0("MathML element <", local, "> is not allowed in SBML"),
-      paste0(path, "/", local),
+      here,
       file
     )
   )
@@ -336,7 +353,14 @@ mathml_cn <- function(t, i, path, file) {
   if ("base" %in% names(attrs) && attrs[["base"]] != "10") {
     math_error("Only base 10 numbers are supported", path, file)
   }
-  texts <- if (length(t$kids[[i]]) == 0) {
+  kids <- t$kids[[i]]
+  if (
+    length(kids) > 0 &&
+      (any(t$local[kids] != "sep") || any(!t$ns[kids] %in% mathml_ns))
+  ) {
+    math_error("<cn> holds only numbers and <sep/>", path, file)
+  }
+  texts <- if (length(kids) == 0) {
     fast_trim(t$text[[i]])
   } else {
     # Parts separated by <sep/>: the text nodes, read from the node itself.
@@ -353,8 +377,13 @@ mathml_cn <- function(t, i, path, file) {
   }
   switch(
     type,
+    integer = {
+      if (length(texts) != 1 || !grepl("^[+-]?[0-9]+$", texts)) {
+        math_error("integer <cn> needs one integer", path, file)
+      }
+      number(texts)
+    },
     real = ,
-    integer = ,
     double = {
       if (length(texts) != 1) {
         math_error("<cn> needs one number", path, file)
@@ -408,7 +437,7 @@ mathml_apply <- function(t, i, path, file) {
   locals <- t$local[rest]
   qualifiers <- locals %in% c("logbase", "degree")
   args <- lapply(which(!qualifiers), function(k) {
-    mathml_node(t, rest[[k]], paste0(path, "[", k + 1, "]"), file)
+    mathml_node(t, rest[[k]], path, file)
   })
   qualifier <- function(name) {
     q <- rest[locals == name]
@@ -422,8 +451,11 @@ mathml_apply <- function(t, i, path, file) {
     mathml_node(t, inner[[1]], paste0(path, "/", name), file)
   }
 
+  if (!identical(t$ns[[head]], mathml_ns)) {
+    math_error(paste0("<", head_name, "> is not MathML"), path, file)
+  }
   if (head_name == "ci") {
-    name <- ci_name(t, head, path, file)
+    name <- ci_name(t, head, paste0(path, "/ci"), file)
     # A bound variable shadows a function definition of the same name, and
     # inlining would put its argument in call position.
     if (!name %in% math_context$functions || name %in% math_context$bvars) {
@@ -450,9 +482,6 @@ mathml_apply <- function(t, i, path, file) {
       )
     }
     return(as.call(c(fn, args)))
-  }
-  if (!identical(t$ns[[head]], mathml_ns)) {
-    math_error(paste0("<", head_name, "> is not MathML"), path, file)
   }
   if (head_name == "root") {
     one_arg(args, "root", path, file)
@@ -593,10 +622,10 @@ mathml_piecewise <- function(t, i, path, file) {
   }
   pieces <- lapply(which(locals == "piece"), function(k) {
     parts <- t$kids[[kids[[k]]]]
+    delayedAssign("here", paste0(path, "/", node_step(t, kids[[k]])))
     if (length(parts) != 2) {
-      math_error("<piece> needs a value and a condition", path, file)
+      math_error("<piece> needs a value and a condition", here, file)
     }
-    here <- paste0(path, "/piece[", k, "]")
     list(
       value = mathml_node(t, parts[[1]], here, file),
       condition = mathml_node(t, parts[[2]], here, file)
@@ -607,7 +636,11 @@ mathml_piecewise <- function(t, i, path, file) {
   if (length(otherwise) == 1) {
     parts <- t$kids[[kids[[otherwise]]]]
     if (length(parts) != 1) {
-      math_error("<otherwise> needs one expression", path, file)
+      math_error(
+        "<otherwise> needs one expression",
+        paste0(path, "/otherwise"),
+        file
+      )
     }
     result <- mathml_node(t, parts[[1]], paste0(path, "/otherwise"), file)
   }
@@ -629,10 +662,11 @@ mathml_lambda <- function(t, i, path, file) {
     bvars,
     function(k) {
       ci <- t$kids[[kids[[k]]]]
+      delayedAssign("here", paste0(path, "/", node_step(t, kids[[k]])))
       if (length(ci) != 1 || t$local[[ci]] != "ci") {
-        math_error("<bvar> holds one <ci>", path, file)
+        math_error("<bvar> holds one <ci>", here, file)
       }
-      ci_name(t, ci, path, file)
+      ci_name(t, ci, paste0(here, "/ci"), file)
     },
     character(1)
   )
@@ -643,7 +677,7 @@ mathml_lambda <- function(t, i, path, file) {
   call(
     "function",
     as.pairlist(formals),
-    mathml_node(t, kids[[body]], paste0(path, "/body"), file)
+    mathml_node(t, kids[[body]], path, file)
   )
 }
 
