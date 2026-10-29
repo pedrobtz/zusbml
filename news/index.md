@@ -34,7 +34,10 @@
   events of a model, following the Level 3 Version 2 specification;
   [`sbml_initial_state()`](https://pedrobtz.github.io/zusbml/reference/sbml_odes.md)
   gives the states at time 0. Algebraic rules, the `delay` csymbol and
-  fast reactions are refused with `zusbml_unsupported`.
+  fast reactions are refused with `zusbml_unsupported`. A symbol defined
+  twice, a definition that uses itself, math that calls anything but a
+  MathML operator or function definition, and function definitions that
+  inline to more than 100,000 terms raise `zusbml_derive_error`.
 
 - [`sbml_derivs()`](https://pedrobtz.github.io/zusbml/reference/sbml_derivs.md)
   returns a derivative function for deSolve with a root function and
