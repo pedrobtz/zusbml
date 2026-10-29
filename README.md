@@ -37,10 +37,15 @@ installed.
   the supported set reproduce their reference results under each case’s
   own tolerances. The other 308 Level 3 Version 2 cases use algebraic
   rules, `delay`, fast reactions or SBML packages, and are refused by
-  name rather than approximated.
+  name rather than approximated. 1,028 of the supported cases also pass
+  when read from their Level 2 Version 5 file.
 - **Pure R.** The only package zusbml imports is
   [zuxml](https://github.com/pedrobtz/zuxml), for the XML; there is no
   system library to install.
+- **Safe with documents from anywhere.** Model math is evaluated in an
+  environment built from an allowlist of base R functions, and a
+  document can call only its own function definitions, so it cannot
+  reach `system()` or the rest of R.
 - **Round trips.** Reading, writing and reading again gives an identical
   model, for every readable Test Suite case and fifty curated BioModels.
 
@@ -85,7 +90,8 @@ Each kind of element is a data frame. The drug in the gut is an amount;
 the drug in the central compartment is a concentration.
 
 ``` r
-sbml_species(m)[, c("id", "compartment", "initial_amount", "has_only_substance_units")]
+species <- sbml_species(m)
+species[, c("id", "compartment", "initial_amount", "has_only_substance_units")]
 #>         id compartment initial_amount has_only_substance_units
 #> 1 drug_gut         gut            100                     TRUE
 #> 2     drug     central              0                    FALSE
@@ -129,12 +135,32 @@ deSolve::ode(
 ```
 
 `sbml_write()` writes SBML Level 3 Version 2, and reading it back gives
-the same model. `sbml_to_rxode2()` writes the equations for
-[rxode2](https://cran.r-project.org/package=rxode2) instead.
+the same model.
 
 ``` r
 identical(sbml_read(sbml_write(m)), m)
 #> [1] TRUE
+```
+
+`sbml_to_rxode2()` writes the equations as
+[rxode2](https://cran.r-project.org/package=rxode2) model text. rxode2
+text cannot express SBML events, so the dose at hour 12 is refused
+unless you ask for it to be dropped.
+
+``` r
+cat(sbml_to_rxode2(m, events = "drop"))
+#> # dosing, written by zusbml from SBML Level 3 Version 2
+#> gut = 1;
+#> central = 10;
+#> ka = 1;
+#> ke = 0.20000000000000001;
+#> dose = 100;
+#> drug_gut(0) = 100;
+#> drug(0) = 0;
+#> absorption = ka * drug_gut;
+#> elimination = ke * drug * central;
+#> d/dt(drug_gut) = -absorption;
+#> d/dt(drug) = (absorption - elimination)/central;
 ```
 
 Functions are named `sbml_*()`: `sbml_read()` and `sbml_write()` for
@@ -146,7 +172,8 @@ documents, an accessor per element kind, and `sbml_odes()`,
 - [Simulating SBML
   models](https://pedrobtz.github.io/zusbml/articles/zusbml.html) walks
   through reading, deriving and simulating a model, with events.
-- `?zusbml` lists what is supported and what is refused.
+- [`?zusbml`](https://pedrobtz.github.io/zusbml/reference/zusbml-package.html)
+  lists what is supported and what is refused.
 - The [reference index](https://pedrobtz.github.io/zusbml/reference/)
   documents every function.
 
