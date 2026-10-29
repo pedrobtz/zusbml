@@ -21,7 +21,7 @@ test_that("an unsupported package is named", {
 
 test_that("an algebraic rule is refused in derivation", {
   m <- sbml_read(model_doc(
-    parameters = par("p", 1, constant = FALSE),
+    parameters = par_xml("p", 1, constant = FALSE),
     rules = paste0("<algebraicRule>", mml(quote(p - 1)), "</algebraicRule>")
   ))
 
@@ -30,7 +30,10 @@ test_that("an algebraic rule is refused in derivation", {
 
 test_that("an assignment cycle names its ids", {
   m <- sbml_read(model_doc(
-    parameters = paste0(par("a", constant = FALSE), par("b", constant = FALSE)),
+    parameters = paste0(
+      par_xml("a", constant = FALSE),
+      par_xml("b", constant = FALSE)
+    ),
     rules = paste0(
       rule("assignment", "a", quote(b)),
       rule("assignment", "b", quote(a))
@@ -53,7 +56,7 @@ test_that("an argument error names the argument", {
 
 test_that("a parse error in nested math names its path", {
   doc <- model_doc(
-    parameters = par("p", constant = FALSE),
+    parameters = par_xml("p", constant = FALSE),
     rules = paste0(
       '<assignmentRule variable="p">',
       '<math xmlns="http://www.w3.org/1998/Math/MathML">',

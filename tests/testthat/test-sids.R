@@ -13,7 +13,7 @@ test_that("ids and references must be SIds", {
 })
 
 test_that("references to other elements must be SIds too", {
-  doc <- model_doc(species = sp("A", amount = 1, compartment = ".y"))
+  doc <- model_doc(species = sp_xml("A", amount = 1, compartment = ".y"))
 
   err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
   expect_equal(err$attribute, "compartment")
@@ -22,7 +22,7 @@ test_that("references to other elements must be SIds too", {
 test_that("names in math must be SIds", {
   for (name in c(".p", "...", "..1", "  ")) {
     doc <- model_doc(
-      parameters = par("p", constant = FALSE),
+      parameters = par_xml("p", constant = FALSE),
       rules = paste0(
         '<assignmentRule variable="p"><math xmlns="http://www.w3.org/1998/Math/MathML">',
         "<ci>",
@@ -36,7 +36,7 @@ test_that("names in math must be SIds", {
 })
 
 test_that("SIds may start with an underscore and use digits", {
-  m <- sbml_read(model_doc(parameters = par("_J0_1", 2)))
+  m <- sbml_read(model_doc(parameters = par_xml("_J0_1", 2)))
 
   expect_equal(sbml_parameters(m)$id, "_J0_1")
 })
@@ -86,7 +86,7 @@ test_that("every SId-valued attribute is checked", {
         '<parameter id="cf" value="1" constant="true"',
         v("units", "dimensionless"),
         "/>",
-        par("p", constant = FALSE)
+        par_xml("p", constant = FALSE)
       ),
       initial = paste0(
         "<initialAssignment",
@@ -151,7 +151,9 @@ test_that("every SId-valued attribute is checked", {
 })
 
 test_that("the first invalid SId in document order is reported", {
-  doc <- model_doc(parameters = paste0(par("ok"), par(".b"), par(".a")))
+  doc <- model_doc(
+    parameters = paste0(par_xml("ok"), par_xml(".b"), par_xml(".a"))
+  )
 
   err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
   expect_equal(err$path, "sbml/model/listOfParameters/parameter[2]")

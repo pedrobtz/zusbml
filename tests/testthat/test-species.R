@@ -30,8 +30,12 @@ test_that("each required species boolean is enforced", {
     doc <- sub(paste0(attr, '="false" '), "", sbml_doc(one_species()))
     doc <- sub(paste0(" ", attr, '="false"'), "", doc)
 
-    err <- expect_error(sbml_read(doc), class = "zusbml_parse_error")
-    expect_equal(err$attribute, attr)
+    err <- expect_error(
+      sbml_read(doc),
+      class = "zusbml_parse_error",
+      info = attr
+    )
+    expect_equal(err$attribute, attr, info = attr)
   }
 })
 

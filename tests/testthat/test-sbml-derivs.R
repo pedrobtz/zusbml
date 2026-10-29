@@ -39,8 +39,8 @@ test_that("time 0 events are applied to y0, and a rerun starts afresh", {
   doc <- with_events(
     model_doc(
       parameters = paste0(
-        par("x", 0, constant = FALSE),
-        par("p", 0, constant = FALSE)
+        par_xml("x", 0, constant = FALSE),
+        par_xml("p", 0, constant = FALSE)
       ),
       rules = rule("rate", "x", 1)
     ),
@@ -90,8 +90,8 @@ test_that("events use the parms the solver passes", {
 
 test_that("parms overrides reach initial assignments and y0", {
   doc <- model_doc(
-    species = sp("A", only_substance = TRUE),
-    parameters = par("dose", 5),
+    species = sp_xml("A", only_substance = TRUE),
+    parameters = par_xml("dose", 5),
     initial = paste0(
       '<initialAssignment symbol="A">',
       mml(quote(2 * dose)),
@@ -109,7 +109,9 @@ test_that("parms overrides reach initial assignments and y0", {
 
 test_that("time 0 events follow parms overrides", {
   doc <- with_events(
-    model_doc(parameters = paste0(par("p", 0, constant = FALSE), par("k", 1))),
+    model_doc(
+      parameters = paste0(par_xml("p", 0, constant = FALSE), par_xml("k", 1))
+    ),
     evt("now", quote(time >= 0), list(p = quote(k * 3)), initial = FALSE)
   )
 

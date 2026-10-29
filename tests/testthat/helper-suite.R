@@ -123,8 +123,9 @@ suite_case <- function(dir, id) {
 # One case through the whole pipeline: read; check that its math survives
 # R -> MathML -> R and the model survives write and re-read; derive;
 # simulate; compare with the results. "pass" or "fail" for supported cases,
-# "refused" or "fail" for unsupported ones; any condition that is not a
-# zusbml condition is "error", a bug in the package or the harness.
+# "refused" or "fail" for unsupported ones, and "read_fail" for either when
+# the model cannot be read; any condition that is not a zusbml condition is
+# "error", a bug in the package or the harness.
 suite_run_case <- function(case) {
   result <- function(status, message = "", level2 = "none") {
     list(
@@ -135,11 +136,13 @@ suite_run_case <- function(case) {
       level2 = level2
     )
   }
-  refused_or_failed <- function(cnd) {
+  # `failed` is the status of a failure: "read_fail" when the model could not
+  # be read, so that the read floor counts only the cases that were read.
+  refused_or_failed <- function(cnd, failed = "fail") {
     status <- if (inherits(cnd, "zusbml_unsupported")) {
-      if (case$category == "unsupported") "refused" else "fail"
+      if (case$category == "unsupported") "refused" else failed
     } else if (inherits(cnd, "zusbml_error")) {
-      "fail"
+      failed
     } else {
       "error"
     }
@@ -148,7 +151,7 @@ suite_run_case <- function(case) {
 
   model <- tryCatch(sbml_read(case$model), error = function(cnd) cnd)
   if (inherits(model, "condition")) {
-    return(refused_or_failed(model))
+    return(refused_or_failed(model, failed = "read_fail"))
   }
   drift <- suite_math_drift(model)
   if (length(drift) > 0) {
@@ -186,7 +189,7 @@ suite_run_case <- function(case) {
   if (!ok) {
     return(result("fail", "outside the tolerances"))
   }
-  result("pass", level2 = suite_level2(case, expected))
+  result("pass", level2 = suite_level2(case, eq, expected))
 }
 
 # The case's results, with the first column, time, named ".time": results
@@ -198,10 +201,10 @@ suite_expected <- function(case) {
   expected
 }
 
-# The case's Level 2 Version 5 file, when it has one, must simulate to the
-# same results as its Level 3 file (design section 6.4): "pass", "fail: ..."
-# or "none".
-suite_level2 <- function(case, expected) {
+# The case's Level 2 Version 5 file, when it has one, must derive to the
+# same equations as its Level 3 file, `eq`, and simulate to the same results
+# (design section 7): "pass", "fail: ..." or "none".
+suite_level2 <- function(case, eq, expected) {
   path <- sub("-sbml-l3v2.xml$", "-sbml-l2v5.xml", case$model)
   if (!file.exists(path)) {
     return("none")
@@ -209,14 +212,19 @@ suite_level2 <- function(case, expected) {
   outcome <- tryCatch(
     {
       model <- sbml_read(path)
-      eq <- sbml_odes(model)
-      actual <- suite_simulate(model, eq, case$settings)
-      suite_compare(
-        actual,
-        expected,
-        absolute = case$settings$absolute,
-        relative = case$settings$relative
-      )
+      eq2 <- sbml_odes(model)
+      differ <- suite_equation_differences(eq, eq2)
+      if (length(differ) > 0) {
+        paste("fail: equations differ in", paste(differ, collapse = ", "))
+      } else {
+        actual <- suite_simulate(model, eq2, case$settings)
+        suite_compare(
+          actual,
+          expected,
+          absolute = case$settings$absolute,
+          relative = case$settings$relative
+        )
+      }
     },
     error = function(cnd) paste("fail:", conditionMessage(cnd))
   )
@@ -227,6 +235,31 @@ suite_level2 <- function(case, expected) {
   } else {
     outcome
   }
+}
+
+# The parts of two sbml_odes() results that differ, among "states", "rhs"
+# and "assignments" (names, order and expressions). The time csymbol reads
+# as `.time` in a document that declares an id "time" (a unit definition,
+# say) and as `time` in one that does not, so `.time` counts as `time`
+# wherever the equations have no symbol of that name.
+suite_equation_differences <- function(a, b) {
+  a <- suite_plain_time(a)
+  b <- suite_plain_time(b)
+  parts <- c("states", "rhs", "assignments")
+  parts[!vapply(parts, function(p) identical(a[[p]], b[[p]]), logical(1))]
+}
+
+suite_plain_time <- function(eq) {
+  symbols <- c(eq$states$name, names(eq$assignments), names(eq$constants))
+  if ("time" %in% symbols) {
+    return(eq)
+  }
+  plain <- function(expr) {
+    do.call(substitute, list(expr, list(.time = quote(time))))
+  }
+  eq$rhs <- lapply(eq$rhs, plain)
+  eq$assignments <- lapply(eq$assignments, plain)
+  eq
 }
 
 # Simulate derived equations on the case's time grid with deSolve, and
@@ -432,8 +465,10 @@ suite_floor_failures <- function(
   floor = suite_floor(),
   skipped = suite_skip()
 ) {
+  # A case counts as read unless its status is "read_fail", "refused" or
+  # "error": a failure after reading ("fail") was still read.
   counts <- c(
-    read = sum(report$status %in% c("read", "pass", "fail")),
+    read = sum(report$status %in% c("pass", "fail")),
     pass = sum(report$status == "pass"),
     refused = sum(report$status == "refused"),
     level2 = sum(report$level2 == "pass")

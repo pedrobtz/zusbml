@@ -17,20 +17,21 @@ test_that("Level 2 Versions 4 and 5 read, with Level 2 defaults applied", {
 
   for (version in 4:5) {
     m <- sbml_read(doc(version))
+    info <- paste("Level 2 Version", version)
 
-    expect_equal(c(m$level, m$version), c(2L, version))
-    expect_equal(sbml_compartments(m)$spatial_dimensions, 3)
-    expect_true(sbml_compartments(m)$constant)
+    expect_equal(c(m$level, m$version), c(2L, version), info = info)
+    expect_equal(sbml_compartments(m)$spatial_dimensions, 3, info = info)
+    expect_true(sbml_compartments(m)$constant, info = info)
     s <- sbml_species(m)
-    expect_false(s$has_only_substance_units)
-    expect_false(s$boundary_condition)
-    expect_false(s$constant)
-    expect_true(sbml_parameters(m)$constant)
+    expect_false(s$has_only_substance_units, info = info)
+    expect_false(s$boundary_condition, info = info)
+    expect_false(s$constant, info = info)
+    expect_true(sbml_parameters(m)$constant, info = info)
     r <- sbml_reactions(m)
-    expect_true(r$reversible)
-    expect_false(r$fast)
-    expect_equal(r$reactants[[1]]$stoichiometry, 1)
-    expect_true(r$reactants[[1]]$constant)
+    expect_true(r$reversible, info = info)
+    expect_false(r$fast, info = info)
+    expect_equal(r$reactants[[1]]$stoichiometry, 1, info = info)
+    expect_true(r$reactants[[1]]$constant, info = info)
   }
 })
 
@@ -83,6 +84,37 @@ test_that("stoichiometryMath becomes an assignment rule on the reference's id", 
   expect_identical(
     sbml_odes(m)$rhs$S,
     call("/", call("-", quote(r_S_stoichiometry * r)), quote(C))
+  )
+})
+
+test_that("an id made for stoichiometryMath avoids the ids already taken", {
+  ref <- function(n) {
+    paste0(
+      '<speciesReference species="S"><stoichiometryMath>',
+      mml(n),
+      "</stoichiometryMath></speciesReference>"
+    )
+  }
+  m <- sbml_read(l2_doc(paste0(
+    '<listOfCompartments><compartment id="C" size="1"/></listOfCompartments>',
+    '<listOfSpecies><species id="S" compartment="C" initialAmount="1"/></listOfSpecies>',
+    '<listOfParameters><parameter id="r_S_stoichiometry" value="2"/></listOfParameters>',
+    '<listOfReactions><reaction id="r"><listOfReactants>',
+    ref(1),
+    "</listOfReactants><listOfProducts>",
+    ref(3),
+    "</listOfProducts><kineticLaw>",
+    mml(1),
+    "</kineticLaw></reaction></listOfReactions>"
+  )))
+
+  r <- sbml_reactions(m)
+
+  expect_equal(r$reactants[[1]]$id, "r_S_stoichiometry_2")
+  expect_equal(r$products[[1]]$id, "r_S_stoichiometry_3")
+  expect_equal(
+    sbml_rules(m)$variable,
+    c("r_S_stoichiometry_2", "r_S_stoichiometry_3")
   )
 })
 

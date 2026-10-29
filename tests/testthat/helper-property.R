@@ -28,7 +28,7 @@ random_network <- function() {
       vapply(
         seq_len(n),
         function(i) {
-          sp(
+          sp_xml(
             species[[i]],
             amount = initial[[i]],
             only_substance = by_amount[[i]]
@@ -39,7 +39,7 @@ random_network <- function() {
       collapse = ""
     ),
     parameters = paste0(
-      vapply(reactions, function(r) par(paste0("k", r$id), r$k), ""),
+      vapply(reactions, function(r) par_xml(paste0("k", r$id), r$k), ""),
       collapse = ""
     ),
     reactions = paste0(
