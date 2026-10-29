@@ -35,7 +35,7 @@ installed.
   [zuxml](https://github.com/pedrobtz/zuxml), for the XML; there is no
   system library to install.
 - **Safe with documents from anywhere.** Model math is evaluated in an
-  environment built from an allowlist of base R functions, and a
+  environment built from a fixed list of base R functions, and a
   document can call only its own function definitions, so it cannot
   reach [`system()`](https://rdrr.io/r/base/system.html) or the rest of
   R.

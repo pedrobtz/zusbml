@@ -71,7 +71,7 @@
 <li>
 <strong>Pure R.</strong> The only package zusbml imports is <a href="https://github.com/pedrobtz/zuxml" class="external-link">zuxml</a>, for the XML; there is no system library to install.</li>
 <li>
-<strong>Safe with documents from anywhere.</strong> Model math is evaluated in an environment built from an allowlist of base R functions, and a document can call only its own function definitions, so it cannot reach <code><a href="https://rdrr.io/r/base/system.html" class="external-link">system()</a></code> or the rest of R.</li>
+<strong>Safe with documents from anywhere.</strong> Model math is evaluated in an environment built from a fixed list of base R functions, and a document can call only its own function definitions, so it cannot reach <code><a href="https://rdrr.io/r/base/system.html" class="external-link">system()</a></code> or the rest of R.</li>
 <li>
 <strong>Round trips.</strong> Reading, writing and reading again gives an identical model, for every readable Test Suite case and fifty curated BioModels.</li>
 </ul>
