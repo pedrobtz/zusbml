@@ -293,7 +293,7 @@ would buy.
 | Operation | Target | Stage 7 (2026-10-28) | 0.1.0 (2026-10-29) |
 | --- | --- | --- | --- |
 | read a 1 MB BioModels document | under 300 ms | 3.1 s per MB | 0.85 s per MB |
-| read every Level 3 Version 2 Test Suite file | under 90 s | 26 s | under 26 s |
+| read every L3V2 Test Suite file | under 90 s | 26 s | under 26 s |
 | MathML to R, 10⁵ nodes | under 1 s | 12.3 s | 1.0 s |
 | `sbml_odes()` on a 500-reaction model | under 500 ms | 1.5 s | 0.36 s |
 | write and re-read 1 MB | under 600 ms | 4.0 s per MB | 1.5 s per MB |
