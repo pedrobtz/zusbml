@@ -2,8 +2,8 @@
 # for it (Q6), so it lives here. The suite is LGPL 2.1 and never committed
 # (D5): it is downloaded by tools/fetch-test-suite.sh and cached.
 on:
-  push:
-    branches: [main, master]
+  # No `push:`: a pull request already checks its merge with main,
+  # and the schedule checks main (r-actions README, "Pushes to main").
   # `labeled` so that adding `full-ci` reruns it with every case.
   pull_request:
     types: [opened, synchronize, reopened, labeled]
