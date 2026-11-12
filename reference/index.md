@@ -41,6 +41,6 @@
 
 - [`zusbml`](https://pedrobtz.github.io/zusbml/reference/zusbml-package.md)
   [`zusbml-package`](https://pedrobtz.github.io/zusbml/reference/zusbml-package.md)
-  : zusbml: Read, Write and Derive Equations from 'SBML' Models
+  : zusbml: Read, Write and Derive Equations from SBML Models
 - [`zusbml_info()`](https://pedrobtz.github.io/zusbml/reference/zusbml_info.md)
   : What this build of zusbml reads and writes

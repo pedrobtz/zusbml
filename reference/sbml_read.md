@@ -3,7 +3,10 @@
 Reads an SBML core document into an `sbml_model`: Level 3 Versions 1 and
 2, and Level 2 Versions 4 and 5, which are mapped to their Level 3
 meaning. Every element carries the attributes Level 3 defines; optional
-values without a default read as `NA`.
+values without a default read as `NA`. `notes` and `annotation` on the
+`listOf*` containers are dropped, so
+[`sbml_write()`](https://pedrobtz.github.io/zusbml/reference/sbml_write.md)
+cannot write them back.
 
 ## Usage
 

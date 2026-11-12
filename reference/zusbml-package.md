@@ -1,6 +1,6 @@
-# zusbml: Read, Write and Derive Equations from 'SBML' Models
+# zusbml: Read, Write and Derive Equations from SBML Models
 
-Reads Systems Biology Markup Language ('SBML') core documents, Level 3
+Reads Systems Biology Markup Language (SBML) core documents, Level 3
 Versions 1 and 2 and Level 2 Versions 4 and 5, into one R object with a
 data frame per element kind. Writes that object back as valid Level 3
 Version 2. Derives the states, initial values, right-hand sides,
