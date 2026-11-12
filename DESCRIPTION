@@ -1,10 +1,10 @@
 Package: zusbml
-Title: Read, Write and Derive Equations from 'SBML' Models
+Title: Read, Write and Derive Equations from SBML Models
 Version: 0.1.0
 Authors@R: 
     person("Pedro", "Baltazar", , "pedrobtz@gmail.com",
            role = c("aut", "cre", "cph"))
-Description: Reads Systems Biology Markup Language ('SBML') core
+Description: Reads Systems Biology Markup Language (SBML) core
     documents, Level 3 Versions 1 and 2 and Level 2 Versions 4 and 5, into
     one R object with a data frame per element kind. Writes that object
     back as valid Level 3 Version 2. Derives the states, initial values,

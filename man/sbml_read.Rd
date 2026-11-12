@@ -23,6 +23,8 @@ Reads an SBML core document into an \code{sbml_model}: Level 3 Versions 1 and
 2, and Level 2 Versions 4 and 5, which are mapped to their Level 3
 meaning. Every element carries the attributes Level 3 defines; optional
 values without a default read as \code{NA}.
+\code{notes} and \code{annotation} on the \verb{listOf*} containers are dropped, so
+\code{\link[=sbml_write]{sbml_write()}} cannot write them back.
 }
 \section{Errors}{
 
