@@ -4,6 +4,8 @@
 #' 2, and Level 2 Versions 4 and 5, which are mapped to their Level 3
 #' meaning. Every element carries the attributes Level 3 defines; optional
 #' values without a default read as `NA`.
+#' `notes` and `annotation` on the `listOf*` containers are dropped, so
+#' [sbml_write()] cannot write them back.
 #'
 #' @param x A file path, a `file://`, `http://` or `https://` URL, a string
 #'   holding the XML itself, or a raw vector.
